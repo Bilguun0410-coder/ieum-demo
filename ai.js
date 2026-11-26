@@ -273,11 +273,24 @@
   }
 
   // ---------- 호출 ----------
+  // 화면에 보여줄 원인 문구에서 키처럼 생긴 글자를 가린다.
+  function cleanDetail(message, key) {
+    let m = String(message || '').replace(/AIza[0-9A-Za-z_-]{10,}/g, '(키 가림)');
+    if (key && key.length >= 8) m = m.split(key).join('(키 가림)');
+    return m.replace(/\s+/g, ' ').trim().slice(0, 160);
+  }
+
   function errorFor(status, message) {
     const m = String(message || '');
+    const base = baseError(status, m);
+    base.error += ' [HTTP ' + status + (m ? ': ' + m : '') + ']';
+    return base;
+  }
+
+  function baseError(status, m) {
     if (status === 400 && /api key|API_KEY/i.test(m)) return { code: 'key', error: 'API 키가 올바르지 않습니다. 관리자 > AI 설정에서 다시 입력하세요.' };
     if (status === 400 && /schema|response_schema|responseSchema|Invalid JSON payload/i.test(m)) return { code: 'schema', error: '요청 형식이 이 모델과 맞지 않습니다.' };
-    if (status === 400) return { code: 'bad', error: 'AI 요청이 거절되었습니다. (' + m.slice(0, 120) + ')' };
+    if (status === 400) return { code: 'bad', error: 'AI 요청이 거절되었습니다.' };
     if (status === 401 || status === 403) return { code: 'key', error: 'API 키가 올바르지 않거나 차단되었습니다. 관리자 > AI 설정에서 확인하세요.' };
     if (status === 404) return { code: 'model', error: '모델을 찾을 수 없습니다. 관리자 > AI 설정에서 다른 모델을 고르세요.' };
     if (status === 429) return { code: 'quota', error: '무료 사용량을 넘었습니다. 1분 뒤 다시 시도하거나 다른 모델을 고르세요.' };
@@ -285,14 +298,31 @@
     return { code: 'http', error: 'AI 요청 실패 (HTTP ' + status + ')' };
   }
 
+  function wait(ms) {
+    return new Promise(function (r) { setTimeout(r, ms); });
+  }
+
+  // 혼잡(5xx)·일시적 한도(429)면 잠시 뒤 다시 보낸다. 같은 내용을 다시 보낼 뿐 추가 정보는 없다.
   async function call(opts) {
+    const delays = Array.isArray(opts.retryDelays) ? opts.retryDelays : [2000, 5000];
+    const sleep = opts.sleep || wait;
+    let r = await callOnce(opts);
+    for (let i = 0; i < delays.length && !r.ok && (r.code === 'server' || r.code === 'quota'); i++) {
+      if (opts.onRetry) opts.onRetry(i + 1, delays.length, r);
+      await sleep(delays[i]);
+      r = await callOnce(opts);
+    }
+    return r;
+  }
+
+  async function callOnce(opts) {
     const key = String(opts.key || '').trim();
     if (!key) return { ok: false, code: 'nokey', error: 'AI 연결이 설정되지 않았습니다. 관리자 > AI 설정에서 API 키를 입력하세요.' };
     const model = MODELS.indexOf(opts.model) >= 0 || /^[a-z0-9][a-z0-9.-]{2,60}$/.test(opts.model || '') ? opts.model : DEFAULT_MODEL;
     const doFetch = opts.fetch || (typeof fetch !== 'undefined' ? fetch.bind(root) : null);
     if (!doFetch) return { ok: false, code: 'network', error: '이 환경에서는 AI를 호출할 수 없습니다.' };
     const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, opts.timeoutMs || 60000) : null;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, opts.timeoutMs || 90000) : null;
     let res;
     try {
       res = await doFetch(ENDPOINT + encodeURIComponent(model) + ':generateContent', {
@@ -314,7 +344,7 @@
       data = null;
     }
     if (!res.ok) {
-      const msg = data && data.error && data.error.message;
+      const msg = cleanDetail(data && data.error && data.error.message, key);
       return Object.assign({ ok: false, status: res.status }, errorFor(res.status, msg));
     }
     const out = responseText(data);
@@ -377,6 +407,7 @@
     parseBriefing: parseBriefing,
     parseChat: parseChat,
     errorFor: errorFor,
+    cleanDetail: cleanDetail,
     call: call,
     extract: extract,
     briefing: briefing,

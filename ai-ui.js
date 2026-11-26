@@ -37,8 +37,15 @@
   function saveSettings() {
     try { window.localStorage.setItem(KEY, JSON.stringify(settings)); } catch (e) { /* 무시 */ }
   }
-  function opts() {
-    return { key: settings.key, model: settings.model };
+  // statusId: 재시도 중임을 알릴 상태 문구 자리
+  function opts(statusId, key) {
+    return {
+      key: key || settings.key,
+      model: settings.model,
+      onRetry: function (i, n) {
+        setStatus(statusId, 'Google AI 서버가 혼잡해 잠시 뒤 다시 시도하는 중입니다 (' + i + '/' + n + ')…');
+      }
+    };
   }
 
   // 실행 전 공통 확인: 키, 이용 횟수
@@ -166,7 +173,7 @@
     if (!precheck('aiDocStatus')) return;
     setBusy(true, 'aiReadBtn', 'AI가 서류를 읽는 중…');
     setStatus('aiDocStatus', 'AI가 서류를 읽고 있습니다. 10~30초 걸릴 수 있습니다.');
-    const r = await AI.extract(opts(), doc.mime, doc.base64);
+    const r = await AI.extract(opts('aiDocStatus'), doc.mime, doc.base64);
     setBusy(false, 'aiReadBtn');
     if (!r.ok) {
       setStatus('aiDocStatus', r.error, 'warn');
@@ -264,7 +271,7 @@
     const stamp = APP.factsStamp();
     setBusy(true, 'aiBriefBtn', 'AI가 브리핑을 쓰는 중…');
     setStatus('aiBriefStatus', '리포트에 포함한 정보만 AI로 보내는 중입니다.');
-    const r = await AI.briefing(opts(), facts);
+    const r = await AI.briefing(opts('aiBriefStatus'), facts);
     setBusy(false, 'aiBriefBtn');
     if (!r.ok) return setStatus('aiBriefStatus', r.error, 'warn');
     STORE.useAi('상담 브리핑');
@@ -301,7 +308,7 @@
     $('chatInput').value = '';
     setBusy(true, 'chatSend', '답을 쓰는 중…');
     setStatus('chatStatus', 'AI가 답을 쓰고 있습니다.');
-    const r = await AI.chat(opts(), history, q, $('chatContext').checked ? APP.aiFacts() : null);
+    const r = await AI.chat(opts('chatStatus'), history, q, $('chatContext').checked ? APP.aiFacts() : null);
     setBusy(false, 'chatSend');
     if (!r.ok) {
       chat.push({ role: 'error', text: r.error });
@@ -398,9 +405,14 @@
         setStatus('chatStatus', '말씀하세요. 듣고 있습니다…');
       } catch (err) { /* 이미 듣는 중 */ }
     } else if (act === 'ai-ping') {
-      setStatus('aiKeyStatus', '연결을 확인하는 중…');
-      AI.ping(opts()).then(function (r) {
-        setStatus('aiKeyStatus', r.ok ? '연결됨 · 모델 ' + r.model + ' (AI 이용 횟수는 차감하지 않음)' : r.error, r.ok ? 'ok' : 'warn');
+      // 저장 전이라도 칸에 입력한 키가 있으면 그 키로 확인한다 (저장은 하지 않음)
+      const typed = $('aiKey').value.trim();
+      const model = $('aiModel').value || settings.model;
+      setStatus('aiKeyStatus', '연결을 확인하는 중… (최대 1~2분)');
+      AI.ping(Object.assign(opts('aiKeyStatus', typed), { model: model })).then(function (r) {
+        setStatus('aiKeyStatus', r.ok
+          ? '연결됨 · 모델 ' + r.model + ' (AI 이용 횟수는 차감하지 않음)' + (typed ? ' · 입력한 키는 아직 저장되지 않았습니다. "저장"을 누르세요.' : '')
+          : r.error, r.ok ? 'ok' : 'warn');
       });
     } else if (act === 'ai-key-del') {
       if (!window.confirm('저장된 API 키를 이 기기에서 지울까요?')) return;

@@ -118,11 +118,11 @@ test('호출: 주소·헤더·모델 이름이 올바르다', async () => {
 test('호출: HTTP 오류를 한국어 안내로 바꾼다', async () => {
   for (const [status, code] of [[403, 'key'], [404, 'model'], [429, 'quota'], [503, 'server']]) {
     const f = fakeFetch(() => ({ status: status, body: { error: { message: 'x' } } }));
-    const r = await A.ping({ key: 'K', fetch: f });
+    const r = await A.ping({ key: 'K', fetch: f, sleep: async () => {} });
     assert.equal(r.ok, false);
     assert.equal(r.code, code);
   }
-  const net = await A.ping({ key: 'K', fetch: async () => { throw new TypeError('Failed to fetch'); } });
+  const net = await A.ping({ key: 'K', fetch: async () => { throw new TypeError('Failed to fetch'); }, sleep: async () => {} });
   assert.equal(net.code, 'network');
 });
 
@@ -146,4 +146,30 @@ test('도우미 응답: 마크다운 기호 정리 + 안전장치', async () => 
   assert.equal(r.ok, true);
   assert.doesNotMatch(r.text, /\*\*/);
   assert.equal(r.removed.length, 1);
+});
+
+test('호출: 혼잡(503)이면 두 번까지 다시 시도하고, 성공하면 결과를 돌려준다', async () => {
+  const f = fakeFetch((n) => (n < 3 ? { status: 503, body: { error: { message: 'This model is currently experiencing high demand.' } } } : { status: 200, body: geminiReply('연결됨') }));
+  const retries = [];
+  const r = await A.ping({ key: 'K', fetch: f, sleep: async () => {}, onRetry: (i, n) => retries.push(i + '/' + n) });
+  assert.equal(r.ok, true);
+  assert.equal(f.calls.length, 3);
+  assert.deepEqual(retries, ['1/2', '2/2']);
+  assert.deepEqual(f.calls[0].body, f.calls[2].body, '같은 내용을 다시 보낸다');
+});
+
+test('호출: 다시 시도해도 실패하면 Google 원인 문구를 붙여 알려준다 (키는 가림)', async () => {
+  const key = 'AIzaSyTESTKEY1234567890';
+  const f = fakeFetch(() => ({ status: 503, body: { error: { message: 'High demand for key ' + key + ' and AIzaOtherKey9999999999' } } }));
+  const r = await A.ping({ key: key, fetch: f, sleep: async () => {} });
+  assert.equal(f.calls.length, 3);
+  assert.equal(r.code, 'server');
+  assert.match(r.error, /HTTP 503: High demand/);
+  assert.doesNotMatch(r.error, /AIza/);
+});
+
+test('호출: 키 오류(403)는 다시 시도하지 않는다', async () => {
+  const f = fakeFetch(() => ({ status: 403, body: { error: { message: 'API key not valid' } } }));
+  await A.ping({ key: 'K', fetch: f, sleep: async () => {} });
+  assert.equal(f.calls.length, 1);
 });
