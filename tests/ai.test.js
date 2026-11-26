@@ -112,7 +112,7 @@ test('호출: 주소·헤더·모델 이름이 올바르다', async () => {
   assert.doesNotMatch(f.calls[0].url, /TESTKEY/, '키를 주소에 넣지 않는다');
   const bad = await A.ping({ key: 'K', model: '../evil', fetch: f });
   assert.equal(bad.ok, true);
-  assert.match(f.calls[1].url, /gemini-flash-latest/);
+  assert.match(f.calls[1].url, /gemini-4-hydrogen/);
 });
 
 test('호출: HTTP 오류를 한국어 안내로 바꾼다', async () => {

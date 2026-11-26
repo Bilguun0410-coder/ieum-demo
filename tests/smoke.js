@@ -472,7 +472,7 @@ async function step(name, fn) {
   await step('관리자 AI 설정: 키 저장(화면에 다시 표시 안 함), 연결 테스트는 횟수 차감 없음', async () => {
     await tab('admin');
     await page.fill('#aiKey', 'TEST-KEY-1234');
-    await page.selectOption('#aiModel', 'gemini-3.5-flash-lite');
+    await page.fill('#aiModel', 'gemini-3.5-flash-lite');
     await page.click('#aiKeyForm button[type="submit"]');
     assert.equal(await page.inputValue('#aiKey'), '');
     assert.match(await page.getAttribute('#aiKey', 'placeholder'), /1234/);

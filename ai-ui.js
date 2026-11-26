@@ -97,7 +97,7 @@
   function loadSamples(cb) {
     if (window.IEUM_SAMPLES) return cb();
     const s = document.createElement('script');
-    s.src = 'samples.js';
+    s.src = 'samples.js?v=4';
     s.onload = cb;
     s.onerror = function () { $('sampleRow').innerHTML = '<p class="muted">견본 서류를 불러오지 못했습니다.</p>'; };
     document.body.appendChild(s);
@@ -352,11 +352,8 @@
 
   // ---------- 관리자 AI 설정 ----------
   function renderSettings() {
-    const sel = $('aiModel');
-    const models = AI.MODELS.slice();
-    if (models.indexOf(settings.model) < 0) models.push(settings.model);
-    sel.innerHTML = models.map(function (m) { return '<option value="' + h(m) + '">' + h(m) + (m === AI.DEFAULT_MODEL ? ' (기본, 최신 Flash 자동)' : '') + '</option>'; }).join('');
-    sel.value = settings.model;
+    $('aiModelList').innerHTML = AI.MODELS.map(function (m) { return '<option value="' + h(m) + '">' + (m === AI.DEFAULT_MODEL ? '기본 (AI Studio 기본 모델)' : '') + '</option>'; }).join('');
+    $('aiModel').value = settings.model;
     $('aiKey').placeholder = settings.key ? '저장된 키 있음 (끝자리 ' + settings.key.slice(-4) + ') · 바꾸려면 새 키 입력' : '키를 붙여 넣으세요';
   }
 
@@ -407,7 +404,7 @@
     } else if (act === 'ai-ping') {
       // 저장 전이라도 칸에 입력한 키가 있으면 그 키로 확인한다 (저장은 하지 않음)
       const typed = $('aiKey').value.trim();
-      const model = $('aiModel').value || settings.model;
+      const model = $('aiModel').value.trim() || settings.model;
       setStatus('aiKeyStatus', '연결을 확인하는 중… (최대 1~2분)');
       AI.ping(Object.assign(opts('aiKeyStatus', typed), { model: model })).then(function (r) {
         setStatus('aiKeyStatus', r.ok
@@ -454,7 +451,12 @@
     e.preventDefault();
     const k = $('aiKey').value.trim();
     if (k) settings.key = k.slice(0, 200);
-    settings.model = $('aiModel').value || AI.DEFAULT_MODEL;
+    const m = $('aiModel').value.trim();
+    if (m && !/^[a-z0-9][a-z0-9.-]{2,60}$/.test(m)) {
+      setStatus('aiKeyStatus', '모델 이름은 영문 소문자·숫자·점·하이픈만 쓸 수 있습니다. (예: gemini-4-hydrogen)', 'warn');
+      return;
+    }
+    settings.model = m || AI.DEFAULT_MODEL;
     saveSettings();
     $('aiKey').value = '';
     renderSettings();

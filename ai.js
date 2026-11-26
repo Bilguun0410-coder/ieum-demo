@@ -10,8 +10,8 @@
   'use strict';
 
   const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/';
-  // 공식 문서(ai.google.dev)의 모델 목록 기준. 'latest' 별칭은 새 모델로 자동 교체된다.
-  const MODELS = ['gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+  // 기본값은 Google AI Studio의 기본 모델. 목록에 없는 모델은 관리자 화면에서 직접 입력할 수 있다.
+  const MODELS = ['gemini-4-hydrogen', 'gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
   const DEFAULT_MODEL = MODELS[0];
   const ASSET_TYPES = ['부동산', '예금', '주식', '보험', '기타', '채무'];
   const CONFIDENCE = ['high', 'medium', 'low'];
