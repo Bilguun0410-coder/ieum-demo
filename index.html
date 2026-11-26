@@ -3,25 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="이음(IEUM): 시니어가 생전에 가족·재산·증여 이력을 정리하고 전문가 상담을 준비하는 서비스의 시연용 프로토타입">
-  <title>이음 IEUM | 자산승계 준비</title>
+  <meta name="description" content="이음(IEUM): AI가 서류를 읽고 상담 질문을 정리해 주는 시니어 자산승계 준비 서비스 (시연용)">
+  <meta name="theme-color" content="#14306a">
+  <title>이음 IEUM | AI 자산승계 준비</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314306a'/%3E%3Ccircle cx='12.5' cy='16' r='6' fill='none' stroke='%23fff' stroke-width='3'/%3E%3Ccircle cx='19.5' cy='16' r='6' fill='none' stroke='%235fd3c5' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <a class="skip" href="#main">본문으로 바로가기</a>
 
-<header class="site-header">
-  <div class="brand">
-    <strong>이음 <span>IEUM</span></strong>
-    <small>내 손으로 시작하는 자산승계 준비</small>
-  </div>
-  <div class="toolbar" role="group" aria-label="화면 보기 설정">
-    <span class="toolbar-label">글자 크기</span>
-    <button type="button" class="chip" data-action="size" data-size="normal" aria-pressed="true">보통</button>
-    <button type="button" class="chip" data-action="size" data-size="large" aria-pressed="false">크게</button>
-    <button type="button" class="chip" data-action="size" data-size="xlarge" aria-pressed="false">아주 크게</button>
-    <button type="button" class="chip" data-action="contrast" aria-pressed="false">고대비</button>
+<header class="appbar">
+  <div class="appbar-inner">
+    <a class="brand" href="#home" data-action="tab" data-tab="home" aria-label="이음 처음 화면">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="currentColor"/><circle cx="12.5" cy="16" r="6" fill="none" stroke="#fff" stroke-width="3"/><circle cx="19.5" cy="16" r="6" fill="none" stroke="#5fd3c5" stroke-width="3"/></svg>
+      <span class="brand-text"><strong>이음</strong><small>AI 자산승계 준비</small></span>
+    </a>
+    <div class="appbar-actions">
+      <button type="button" class="wallet-chip" id="walletChip" data-action="tab" data-tab="store" aria-label="내 이용권 보기">이용권</button>
+      <div class="view-ctl" role="group" aria-label="화면 보기 설정">
+        <span class="view-label">글자</span>
+        <button type="button" class="seg" data-action="size" data-size="normal" aria-pressed="true">보통</button>
+        <button type="button" class="seg" data-action="size" data-size="large" aria-pressed="false">크게</button>
+        <button type="button" class="seg" data-action="size" data-size="xlarge" aria-pressed="false">아주 크게</button>
+        <button type="button" class="seg" data-action="contrast" aria-pressed="false">고대비</button>
+      </div>
+      <button type="button" class="ghost-btn" id="adminBtn">관리자</button>
+    </div>
   </div>
 </header>
 
@@ -37,19 +46,37 @@
     <button type="button" data-action="tab" data-tab="scenario">④ 시나리오 비교</button>
     <button type="button" data-action="tab" data-tab="will">⑤ 유언 의사</button>
     <button type="button" data-action="tab" data-tab="report">⑥ 상담 리포트</button>
+    <button type="button" data-action="tab" data-tab="assistant" class="tab-ai"><span class="ai-dot" aria-hidden="true"></span>AI 도우미</button>
+    <button type="button" data-action="tab" data-tab="store">이용권</button>
     <button type="button" data-action="tab" data-tab="data">내 데이터</button>
+    <button type="button" data-action="tab" data-tab="admin" id="adminTab" class="tab-admin" hidden>관리자</button>
   </nav>
 
   <!-- ================= 시작 ================= -->
   <section id="home" class="panel" hidden aria-labelledby="h-home">
     <div class="hero">
-      <p class="tag">시니어를 위한 상속·증여 준비 도우미</p>
+      <p class="tag">시니어를 위한 AI 상속·증여 준비</p>
       <h1 id="h-home" tabindex="-1">전문가를 만나기 전에,<br>내 재산과 가족 이야기부터 정리하세요.</h1>
-      <p>질문에 따라 하나씩 입력하면 빠진 정보를 알려드리고, 상담에 가져갈 리포트를 만들어 드립니다. 세금을 대신 계산하거나 법적 결론을 내리지 않습니다.</p>
+      <p>서류 사진을 올리면 <b>AI가 금액과 기준일을 읽어 목록을 채우고</b>, 상담 때 물어볼 질문까지 정리해 드립니다. 세금을 대신 계산하거나 법적 결론을 내리지는 않습니다.</p>
       <div class="hero-actions">
-        <button type="button" class="primary" data-action="tab" data-tab="family">처음부터 시작하기</button>
-        <button type="button" class="secondary" data-action="load-sample">가상 샘플로 둘러보기</button>
+        <button type="button" class="primary on-dark" data-action="tab" data-tab="family">처음부터 시작하기</button>
+        <button type="button" class="secondary on-dark" data-action="load-sample">가상 샘플로 둘러보기</button>
       </div>
+    </div>
+
+    <div class="feature-grid">
+      <button type="button" class="feature" data-action="tab" data-tab="assets">
+        <span class="feature-icon ai" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3v5h5M10 13h6M10 17h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <b>AI 서류 읽기</b><span>잔액증명서·공시가격 사진에서 금액과 기준일을 자동으로 찾아요</span>
+      </button>
+      <button type="button" class="feature" data-action="tab" data-tab="report">
+        <span class="feature-icon ai" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 9h8M8 12h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <b>AI 상담 브리핑</b><span>입력한 내용을 쉽게 요약하고 전문가에게 물을 질문을 써 드려요</span>
+      </button>
+      <button type="button" class="feature" data-action="tab" data-tab="assistant">
+        <span class="feature-icon ai" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <b>AI 도우미</b><span>"유류분이 뭐예요?" 같은 질문을 말로 묻고 소리로 들을 수 있어요</span>
+      </button>
     </div>
 
     <div class="card" id="homeReadiness"></div>
@@ -58,11 +85,11 @@
       <h2>이렇게 진행해요</h2>
       <ol class="steps">
         <li><button type="button" class="step" data-action="tab" data-tab="family"><b>① 가족</b><span>배우자·자녀 등 관계를 입력하고 직접 확인합니다.</span></button></li>
-        <li><button type="button" class="step" data-action="tab" data-tab="assets"><b>② 재산·증여</b><span>재산, 채무, 과거 증여를 기준일과 함께 기록합니다.</span></button></li>
-        <li><button type="button" class="step" data-action="tab" data-tab="check"><b>③ 준비 점검</b><span>빠진 정보와 확인할 사항을 규칙으로 분류합니다.</span></button></li>
+        <li><button type="button" class="step" data-action="tab" data-tab="assets"><b>② 재산·증여</b><span>서류 사진을 AI로 읽거나 직접 입력합니다.</span></button></li>
+        <li><button type="button" class="step" data-action="tab" data-tab="check"><b>③ 준비 점검</b><span>빠진 정보와 사전증여 합산 검토 대상을 규칙으로 분류합니다.</span></button></li>
         <li><button type="button" class="step" data-action="tab" data-tab="scenario"><b>④ 시나리오 비교</b><span>증여·상속·배분을 놓고 확인할 쟁점을 비교합니다.</span></button></li>
         <li><button type="button" class="step" data-action="tab" data-tab="will"><b>⑤ 유언 의사</b><span>남기고 싶은 뜻을 정리합니다. (법적 효력 없음)</span></button></li>
-        <li><button type="button" class="step" data-action="tab" data-tab="report"><b>⑥ 상담 리포트</b><span>상담에 가져갈 자료를 인쇄하거나 PDF로 저장합니다.</span></button></li>
+        <li><button type="button" class="step" data-action="tab" data-tab="report"><b>⑥ 상담 리포트</b><span>AI 브리핑을 더해 상담용 리포트를 발급합니다.</span></button></li>
       </ol>
     </div>
 
@@ -72,22 +99,32 @@
         <table>
           <thead><tr><th scope="col">역할</th><th scope="col">하는 일</th><th scope="col">하지 않는 일</th></tr></thead>
           <tbody>
-            <tr><th scope="row">나 (재산 소유자)</th><td>재산 기록 확인, 공개할 항목 선택, 상담과 실행 결정</td><td>—</td></tr>
-            <tr><th scope="row">이 앱 (규칙 기반)</th><td>입력 정리, 빠진 정보 점검, 사전증여 합산 검토 대상 분류, 상담 질문 정리</td><td>세액 계산, 최적 절세안 제시, 유언 효력 확정, 신고 대행</td></tr>
+            <tr><th scope="row">나 (재산 소유자)</th><td>AI가 읽은 값을 원문과 대조, 공개할 항목 선택, 상담과 실행 결정</td><td>—</td></tr>
+            <tr><th scope="row">AI (Google Gemini)</th><td>서류 사진에서 금액·기준일 추출, 상담 브리핑 초안, 용어·절차 설명</td><td>세액 계산, 유불리 판단, 유언 효력 판단</td></tr>
+            <tr><th scope="row">규칙 엔진</th><td>준비 점수, 사전증여 합산 검토 분류, AI 답변 안전장치(금지 문장 차단)</td><td>개별 사건의 최종 판단</td></tr>
             <tr><th scope="row">세무사·변호사·공증인</th><td>개별 사건의 세무·법률 검토, 유언 공증 등 법정 업무</td><td>—</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="muted">이 데모는 AI를 사용하지 않고 고정된 규칙으로만 동작합니다. 전문가 연결과 결제 기능은 없습니다.</p>
     </div>
 
     <div class="card">
-      <h2>이 데모에 대해</h2>
+      <h2>이용 요금</h2>
+      <div class="price-strip">
+        <div><b>무료</b><span>입력·준비 점검·시나리오 비교 + AI 체험 3회</span></div>
+        <div><b>89,000원</b><span>자산승계 준비 패키지: 리포트 발급 + AI 30회</span></div>
+        <div><b>연 59,000원</b><span>가족 기록관리: 리포트 무제한 재발급 + AI 50회</span></div>
+      </div>
+      <p class="muted">가격은 검증 전 가설이며, 이 시연판의 결제는 <b>모의 결제</b>라 실제로 돈이 나가지 않습니다.</p>
+      <button type="button" class="secondary" data-action="tab" data-tab="store">이용권 보러 가기</button>
+    </div>
+
+    <div class="card">
+      <h2>이 시연판에 대해</h2>
       <ul class="plain">
-        <li><b>입력한 정보는 이 기기의 브라우저에만 저장</b>되고 서버로 전송되지 않습니다. 언제든 내보내거나 전부 삭제할 수 있습니다.</li>
-        <li>실명, 계좌번호, 실제 자산 정보는 입력하지 마세요. 가명과 가상 금액을 사용하세요.</li>
-        <li>사업 개발서의 12주 MVP 필수 기능(P0)을 구현했습니다. OCR·AI 문서 추출, 계좌 자동조회, 가족 공유는 아직 없습니다.</li>
-        <li>가격 구상(가설, 검증 전): 무료 시작 점검, 건당 89,000원 준비 리포트. 이 데모에는 결제 기능이 없습니다.</li>
+        <li>입력한 정보는 <b>이 기기의 브라우저에만 저장</b>됩니다. AI 기능을 쓸 때만 해당 내용이 Google Gemini로 전송됩니다.</li>
+        <li>실명, 계좌번호, 실제 서류는 넣지 마세요. 가명과 가상 금액, 앱에 들어 있는 견본 서류를 사용하세요.</li>
+        <li>계좌 자동조회와 가족 공유는 제공하지 않습니다. (자동조회는 금융 규제상 별도 허가가 필요한 영역입니다)</li>
       </ul>
     </div>
   </section>
@@ -98,12 +135,18 @@
       <h2 id="h-family" tabindex="-1">① 가족 등록</h2>
       <p class="muted">배우자·자녀 등 가족 구성을 입력하세요. 이름은 가명이나 호칭만 쓰세요.</p>
       <form id="familyForm" novalidate>
-        <label for="familyRelation">관계</label>
-        <select id="familyRelation">
-          <option>배우자</option><option>자녀</option><option>부모</option><option>형제자매</option><option>기타</option>
-        </select>
-        <label for="familyName">표시 이름 (가명 또는 호칭)</label>
-        <input id="familyName" maxlength="36" autocomplete="off" placeholder="예: 첫째 자녀">
+        <div class="form-grid">
+          <div>
+            <label for="familyRelation">관계</label>
+            <select id="familyRelation">
+              <option>배우자</option><option>자녀</option><option>부모</option><option>형제자매</option><option>기타</option>
+            </select>
+          </div>
+          <div>
+            <label for="familyName">표시 이름 (가명 또는 호칭)</label>
+            <input id="familyName" maxlength="36" autocomplete="off" placeholder="예: 첫째 자녀">
+          </div>
+        </div>
         <p class="form-error" id="familyError" role="alert"></p>
         <div class="btn-row">
           <button type="submit" class="primary" id="familySubmit">가족 추가</button>
@@ -123,26 +166,58 @@
 
   <!-- ================= ② 재산·증여 ================= -->
   <section id="assets" class="panel" hidden aria-labelledby="h-assets">
+    <div class="card ai-card" id="aiDocCard">
+      <div class="ai-head">
+        <span class="ai-badge">AI</span>
+        <h2 id="h-assets" tabindex="-1">② 재산 입력 — AI 서류 읽기</h2>
+      </div>
+      <p>잔액증명서, 공시가격 확인서, 대출 잔액 확인서 같은 <b>서류 사진을 올리면 AI가 재산 항목·금액·기준일을 읽어</b> 아래 목록에 채울 준비를 합니다. 저장하기 전에 원문과 꼭 대조하세요.</p>
+      <div class="sample-row" id="sampleRow" aria-label="견본 서류"></div>
+      <div class="btn-row">
+        <button type="button" class="secondary" data-action="ai-pick">내 사진·PDF 올리기</button>
+        <input type="file" id="aiDocFile" accept="image/*,application/pdf" hidden aria-label="AI가 읽을 서류 사진 또는 PDF 선택">
+      </div>
+      <div id="aiDocPreview" class="doc-preview" hidden></div>
+      <label class="check consent"><input type="checkbox" id="aiConsent"> 이 자료가 <b>가상 자료</b>이며, 분석을 위해 Google Gemini로 전송된다는 것을 확인했습니다</label>
+      <div class="btn-row">
+        <button type="button" class="ai-btn" id="aiReadBtn" data-action="ai-read" disabled>AI로 읽기 <small>(AI 1회 사용)</small></button>
+        <span class="ai-status" id="aiDocStatus" role="status" aria-live="polite"></span>
+      </div>
+      <div id="aiDocResult"></div>
+    </div>
+
     <div class="card">
-      <h2 id="h-assets" tabindex="-1">② 재산·채무 입력</h2>
+      <h2>재산·채무 직접 입력</h2>
       <p class="muted">금액은 직접 입력한 값이며 세법상 평가액이 아닙니다. 모르면 "추정"이나 "나중에 확인"으로 표시하세요.</p>
       <form id="assetForm" novalidate>
-        <label for="assetType">분류</label>
-        <select id="assetType">
-          <option value="부동산">부동산</option><option value="예금">예금</option><option value="주식">주식</option>
-          <option value="보험">보험 관련 자산</option><option value="기타">기타 자산</option><option value="채무">채무</option>
-        </select>
-        <label for="assetName">항목명 (가상 명칭)</label>
-        <input id="assetName" maxlength="60" autocomplete="off" placeholder="예: 서울 소재 아파트 (예시)">
-        <label for="assetValue">금액 (원)</label>
-        <input id="assetValue" type="number" inputmode="numeric" min="0" max="9999999999999" step="1" placeholder="예: 500000000" aria-describedby="assetValueHint">
-        <p id="assetValueHint" class="hint" aria-live="polite"></p>
-        <label for="assetAsOf">금액 기준일</label>
-        <input id="assetAsOf" type="date">
-        <label for="assetStatus">확인 상태</label>
-        <select id="assetStatus">
-          <option>직접 확인</option><option>추정</option><option>나중에 확인</option>
-        </select>
+        <div class="form-grid">
+          <div>
+            <label for="assetType">분류</label>
+            <select id="assetType">
+              <option value="부동산">부동산</option><option value="예금">예금</option><option value="주식">주식</option>
+              <option value="보험">보험 관련 자산</option><option value="기타">기타 자산</option><option value="채무">채무</option>
+            </select>
+          </div>
+          <div>
+            <label for="assetName">항목명 (가상 명칭)</label>
+            <input id="assetName" maxlength="60" autocomplete="off" placeholder="예: 서울 소재 아파트 (예시)">
+          </div>
+          <div>
+            <label for="assetValue">금액 (원)</label>
+            <input id="assetValue" type="number" inputmode="numeric" min="0" max="9999999999999" step="1" placeholder="예: 500000000" aria-describedby="assetValueHint">
+            <p id="assetValueHint" class="hint" aria-live="polite"></p>
+          </div>
+          <div>
+            <label for="assetAsOf">금액 기준일</label>
+            <input id="assetAsOf" type="date">
+          </div>
+          <div>
+            <label for="assetStatus">확인 상태</label>
+            <select id="assetStatus">
+              <option>직접 확인</option><option>추정</option><option>나중에 확인</option>
+            </select>
+          </div>
+        </div>
         <p class="form-error" id="assetError" role="alert"></p>
         <div class="btn-row">
           <button type="submit" class="primary" id="assetSubmit">추가</button>
@@ -165,17 +240,25 @@
       <h2>과거 증여 기록</h2>
       <p class="muted">기억나는 증여를 적어 두세요. 합산 검토 대상인지는 "③ 준비 점검"에서 분류합니다.</p>
       <form id="giftForm" novalidate>
-        <label for="giftTo">받은 사람</label>
-        <select id="giftTo"></select>
-        <div id="giftOtherWrap" hidden>
-          <label for="giftOtherName">받은 사람 이름 (가명)</label>
-          <input id="giftOtherName" maxlength="36" autocomplete="off" placeholder="예: 친척(가명)">
+        <div class="form-grid">
+          <div>
+            <label for="giftTo">받은 사람</label>
+            <select id="giftTo"></select>
+          </div>
+          <div id="giftOtherWrap" hidden>
+            <label for="giftOtherName">받은 사람 이름 (가명)</label>
+            <input id="giftOtherName" maxlength="36" autocomplete="off" placeholder="예: 친척(가명)">
+          </div>
+          <div>
+            <label for="giftDate">증여일</label>
+            <input id="giftDate" type="date">
+          </div>
+          <div>
+            <label for="giftAmount">증여 금액 (원)</label>
+            <input id="giftAmount" type="number" inputmode="numeric" min="0" max="9999999999999" step="1" aria-describedby="giftAmountHint">
+            <p id="giftAmountHint" class="hint" aria-live="polite"></p>
+          </div>
         </div>
-        <label for="giftDate">증여일</label>
-        <input id="giftDate" type="date">
-        <label for="giftAmount">증여 금액 (원)</label>
-        <input id="giftAmount" type="number" inputmode="numeric" min="0" max="9999999999999" step="1" aria-describedby="giftAmountHint">
-        <p id="giftAmountHint" class="hint" aria-live="polite"></p>
         <p class="form-error" id="giftError" role="alert"></p>
         <div class="btn-row">
           <button type="submit" class="primary" id="giftSubmit">증여 기록 추가</button>
@@ -202,7 +285,7 @@
       <h3>사전증여 합산 검토 대상 분류</h3>
       <p class="muted">상속인은 사망 전 10년, 상속인이 아닌 사람은 5년 이내의 증여가 상속 때 합산 검토 대상입니다. (근거: 국세청 상속세 세액계산 흐름도, 아래 가정 기준일은 "만약 이 날 상속이 시작된다면"입니다.)</p>
       <label for="assumeDate">가정 기준일</label>
-      <input id="assumeDate" type="date">
+      <input id="assumeDate" type="date" class="narrow">
       <div id="giftReview" class="table-wrap"></div>
       <p class="notice">분류 결과는 합산이 확정됐다는 뜻이 아닙니다. 실제 합산 여부와 세액 영향은 세무사 등 전문가가 판단합니다. 경계일(정확히 N년 전)은 검토 대상에 포함해 표시합니다.</p>
     </div>
@@ -234,16 +317,24 @@
       <h2 id="h-will" tabindex="-1">⑤ 유언 의사 정리</h2>
       <div class="notice strong">여기서 정리하는 내용은 <b>법적 효력이 있는 유언장이 아닙니다.</b> 남기고 싶은 뜻을 정리해 전문가와 상의하기 위한 초안입니다. 유언은 민법이 정한 방식을 지켜야 효력이 생깁니다. (민법 제1065조)</div>
       <form id="willForm" novalidate>
-        <label for="willTo">누구에게</label>
-        <select id="willTo"></select>
-        <div id="willOtherWrap" hidden>
-          <label for="willOtherName">이름 (가명)</label>
-          <input id="willOtherName" maxlength="36" autocomplete="off">
+        <div class="form-grid">
+          <div>
+            <label for="willTo">누구에게</label>
+            <select id="willTo"></select>
+          </div>
+          <div id="willOtherWrap" hidden>
+            <label for="willOtherName">이름 (가명)</label>
+            <input id="willOtherName" maxlength="36" autocomplete="off">
+          </div>
+          <div class="span2">
+            <label for="willWhat">무엇을 남기고 싶나요</label>
+            <input id="willWhat" maxlength="120" autocomplete="off" placeholder="예: 예금 일부, 거주 중인 집">
+          </div>
+          <div class="span2">
+            <label for="willReason">그렇게 생각한 이유 (선택)</label>
+            <input id="willReason" maxlength="200" autocomplete="off" placeholder="예: 결혼 준비 지원">
+          </div>
         </div>
-        <label for="willWhat">무엇을 남기고 싶나요</label>
-        <input id="willWhat" maxlength="120" autocomplete="off" placeholder="예: 예금 일부, 거주 중인 집">
-        <label for="willReason">그렇게 생각한 이유 (선택)</label>
-        <input id="willReason" maxlength="200" autocomplete="off" placeholder="예: 결혼 준비 지원">
         <p class="form-error" id="willError" role="alert"></p>
         <div class="btn-row">
           <button type="submit" class="primary" id="willSubmit">추가</button>
@@ -260,7 +351,7 @@
     <div class="card">
       <h3>법정 방식 알아보기</h3>
       <label for="willMethod">관심 있는 방식</label>
-      <select id="willMethod"></select>
+      <select id="willMethod" class="narrow"></select>
       <div id="willGuide"></div>
       <p class="muted">핵심만 요약한 것이며 유효성 판단과 실제 작성은 공증인·변호사 등 전문가와 법정 절차가 담당합니다.</p>
     </div>
@@ -270,22 +361,83 @@
   <section id="report" class="panel" hidden aria-labelledby="h-report">
     <div class="card no-print">
       <h2 id="h-report" tabindex="-1">⑥ 상담 준비 리포트</h2>
-      <p class="muted">세무사·변호사를 만날 때 가져갈 자료입니다. 상대에게 보여줄 항목만 골라 인쇄하세요.</p>
+      <p class="muted">세무사·변호사를 만날 때 가져갈 자료입니다. 상대에게 보여줄 항목만 골라 발급하세요.</p>
       <fieldset class="include">
         <legend>리포트에 포함할 항목</legend>
         <label class="check"><input type="checkbox" data-include="family"> 가족</label>
         <label class="check"><input type="checkbox" data-include="assets"> 재산·채무</label>
         <label class="check"><input type="checkbox" data-include="gifts"> 과거 증여</label>
         <label class="check"><input type="checkbox" data-include="will"> 유언 의사 초안</label>
+        <label class="check"><input type="checkbox" data-include="ai"> AI 상담 브리핑</label>
       </fieldset>
       <h3>상담 때 챙길 서류 (예시)</h3>
       <ul id="docList" class="list"></ul>
       <p class="muted">실제 필요한 서류는 전문가가 안내합니다.</p>
-      <div class="btn-row">
-        <button type="button" class="primary" data-action="print">인쇄하거나 PDF로 저장</button>
-      </div>
     </div>
+
+    <div class="card ai-card no-print" id="aiBriefCard">
+      <div class="ai-head"><span class="ai-badge">AI</span><h3>AI 상담 브리핑</h3></div>
+      <p>리포트에 넣기로 한 정보만 AI에게 보내 <b>쉬운 요약, 더 챙길 것, 전문가에게 물어볼 질문</b>을 만듭니다. 만든 뒤 규칙 안전장치가 세액 추정·유불리 판단 문장을 걸러냅니다.</p>
+      <div class="btn-row">
+        <button type="button" class="ai-btn" id="aiBriefBtn" data-action="ai-brief">AI 브리핑 만들기 <small>(AI 1회 사용)</small></button>
+        <button type="button" class="secondary" id="aiBriefDel" data-action="ai-brief-del" hidden>브리핑 지우기</button>
+        <span class="ai-status" id="aiBriefStatus" role="status" aria-live="polite"></span>
+      </div>
+      <div id="aiBriefView"></div>
+    </div>
+
+    <div class="card no-print issue-card" id="issueBox"></div>
+
     <article id="reportDoc" class="card report-doc" aria-label="상담 준비 리포트 미리보기"></article>
+  </section>
+
+  <!-- ================= AI 도우미 ================= -->
+  <section id="assistant" class="panel" hidden aria-labelledby="h-assistant">
+    <div class="card ai-card">
+      <div class="ai-head"><span class="ai-badge">AI</span><h2 id="h-assistant" tabindex="-1">AI 도우미</h2></div>
+      <p>상속·증여 준비에 나오는 용어와 절차를 쉽게 설명해 드립니다. 세금 액수나 "어느 쪽이 유리한지"는 답하지 않고 전문가 확인으로 안내합니다.</p>
+      <div class="quick" id="quickQs" aria-label="자주 묻는 질문"></div>
+      <div class="chat" id="chatLog" aria-live="polite" aria-label="대화 내용"></div>
+      <form id="chatForm" class="chat-form" novalidate>
+        <label for="chatInput" class="sr">질문 입력</label>
+        <textarea id="chatInput" rows="2" maxlength="500" placeholder="예: 사전증여 합산이 무슨 뜻인가요?"></textarea>
+        <div class="btn-row">
+          <button type="submit" class="ai-btn" id="chatSend">물어보기 <small>(AI 1회)</small></button>
+          <button type="button" class="secondary" id="micBtn" data-action="mic" hidden aria-pressed="false">🎤 말로 묻기</button>
+          <button type="button" class="link" data-action="chat-clear">대화 지우기</button>
+        </div>
+        <label class="check"><input type="checkbox" id="chatContext"> 내가 입력한 정보(가명)를 참고해서 답하기 — 이 정보가 AI로 전송됩니다</label>
+        <span class="ai-status" id="chatStatus" role="status" aria-live="polite"></span>
+      </form>
+      <p class="muted">대화 내용은 저장하지 않으며 화면을 새로고침하면 사라집니다.</p>
+    </div>
+  </section>
+
+  <!-- ================= 이용권 ================= -->
+  <section id="store" class="panel" hidden aria-labelledby="h-store">
+    <div class="card">
+      <h2 id="h-store" tabindex="-1">이용권</h2>
+      <div class="notice">시연용 <b>모의 결제</b>입니다. 실제로 돈이 나가지 않으며 카드번호를 입력받지 않습니다.</div>
+      <div class="wallet" id="walletView"></div>
+    </div>
+    <div class="card">
+      <h3>상품</h3>
+      <div class="product-grid" id="productGrid"></div>
+    </div>
+    <div class="card">
+      <h3>금액권 등록</h3>
+      <p class="muted">선물 받은 금액권 번호를 입력하면 잔액으로 충전되고, 이용권 결제에 쓸 수 있습니다.</p>
+      <form id="redeemForm" class="inline-form" novalidate>
+        <label for="redeemCode" class="sr">금액권 번호</label>
+        <input id="redeemCode" maxlength="20" autocomplete="off" placeholder="IEUM-XXXX-XXXX" class="code-input">
+        <button type="submit" class="primary">등록하기</button>
+      </form>
+      <p class="form-error" id="redeemError" role="alert"></p>
+    </div>
+    <div class="card">
+      <h3>주문 내역</h3>
+      <div id="orderList" class="table-wrap"></div>
+    </div>
   </section>
 
   <!-- ================= 내 데이터 ================= -->
@@ -304,12 +456,11 @@
     <div class="card">
       <h3>개인정보 안내</h3>
       <ul class="plain">
-        <li><b>저장 위치:</b> 이 기기 브라우저의 저장공간(localStorage)에만 저장합니다. 서버로 보내지 않으며 계정도 없습니다.</li>
-        <li><b>수집하는 정보:</b> 내가 입력한 가족(가명), 재산·채무, 증여, 유언 의사 메모뿐입니다. 비밀번호·계좌번호·인증번호는 받지 않습니다.</li>
-        <li><b>공유:</b> 이 데모에는 다른 사람에게 자동으로 공유하는 기능이 없습니다. 리포트를 인쇄할 때 포함할 항목은 내가 고릅니다.</li>
-        <li><b>삭제:</b> "모든 데이터 삭제"를 누르면 이 기기에서 즉시 지워집니다. 내려받은 파일은 직접 지워야 합니다.</li>
-        <li><b>내려받은 파일:</b> 입력한 정보가 암호화 없이 그대로 들어 있습니다. 메신저나 이메일로 보내기 전에 한 번 더 생각하세요.</li>
-        <li>공용 컴퓨터에서는 사용 후 반드시 모든 데이터를 삭제하세요.</li>
+        <li><b>저장 위치:</b> 이 기기 브라우저의 저장공간(localStorage)에만 저장합니다. 계정과 서버가 없습니다.</li>
+        <li><b>AI로 전송되는 것:</b> AI 버튼을 누를 때만, 그 기능에 필요한 내용(서류 이미지 또는 리포트에 포함한 가명 정보, 질문)이 Google Gemini로 전송됩니다. 무료 등급 API는 전송 내용이 Google 제품 개선에 쓰일 수 있으니 가상 자료만 사용하세요.</li>
+        <li><b>서류 원본:</b> AI가 읽은 이미지는 저장하지 않고, 확인한 항목만 저장합니다.</li>
+        <li><b>삭제:</b> "모든 데이터 삭제"를 누르면 이 기기에서 즉시 지워집니다. (이용권·주문 기록은 관리자 화면에서 초기화)</li>
+        <li><b>내려받은 파일:</b> 입력한 정보가 암호화 없이 그대로 들어 있습니다. 보관과 전달에 주의하세요.</li>
       </ul>
     </div>
     <div class="card">
@@ -319,7 +470,7 @@
     </div>
     <div class="card">
       <h3>파일럿 조사용 (선택)</h3>
-      <p class="muted">이용자 인터뷰에서 가격 반응을 확인할 때만 사용합니다. 선택한 값은 내려받는 파일에 함께 저장됩니다. 실제 결제는 일어나지 않습니다.</p>
+      <p class="muted">이용자 인터뷰에서 가격 반응을 확인할 때만 사용합니다. 선택한 값은 내려받는 파일에 함께 저장됩니다.</p>
       <fieldset class="include">
         <legend>이 리포트에 얼마까지 낼 의향이 있나요?</legend>
         <label class="check"><input type="radio" name="price" value="0"> 무료여야 함</label>
@@ -331,11 +482,123 @@
     </div>
   </section>
 
+  <!-- ================= 관리자 ================= -->
+  <section id="admin" class="panel" hidden aria-labelledby="h-admin">
+    <div class="card admin-head">
+      <h2 id="h-admin" tabindex="-1">관리자</h2>
+      <div id="adminGate"></div>
+    </div>
+    <div id="adminBody" hidden>
+      <div class="card">
+        <h3>모의 매출 현황</h3>
+        <div id="adminStats"></div>
+      </div>
+      <div class="card ai-card">
+        <div class="ai-head"><span class="ai-badge">AI</span><h3>AI 설정 (Google Gemini)</h3></div>
+        <div class="notice">실제 서비스에서는 API 키를 서버에만 보관합니다. 이 시연판은 키를 <b>이 기기 브라우저에만</b> 저장하고 저장소·내려받기 파일에는 넣지 않습니다. 발표가 끝나면 키를 삭제하세요.</div>
+        <form id="aiKeyForm" novalidate>
+          <div class="form-grid">
+            <div class="span2">
+              <label for="aiKey">API 키 (Google AI Studio에서 발급)</label>
+              <input id="aiKey" type="password" autocomplete="off" spellcheck="false" placeholder="키를 붙여 넣으세요">
+            </div>
+            <div>
+              <label for="aiModel">모델</label>
+              <select id="aiModel"></select>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button type="submit" class="primary">저장</button>
+            <button type="button" class="secondary" data-action="ai-ping">연결 테스트</button>
+            <button type="button" class="danger" data-action="ai-key-del">키 삭제</button>
+          </div>
+          <p class="ai-status" id="aiKeyStatus" role="status" aria-live="polite"></p>
+        </form>
+        <p class="muted">키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> · 무료 등급은 사용량 제한이 있고, 전송 내용이 Google 제품 개선에 쓰일 수 있습니다.</p>
+      </div>
+      <div class="card">
+        <h3>상품 관리</h3>
+        <div id="adminProducts" class="table-wrap"></div>
+        <h4>새 이용권 추가</h4>
+        <form id="productForm" novalidate>
+          <div class="form-grid four">
+            <div class="span2"><label for="pName">상품명</label><input id="pName" maxlength="30" autocomplete="off" placeholder="예: AI 추가 10회권"></div>
+            <div><label for="pPrice">가격 (원)</label><input id="pPrice" type="number" min="0" step="100" inputmode="numeric"></div>
+            <div><label for="pAi">AI 횟수</label><input id="pAi" type="number" min="0" step="1" value="0"></div>
+            <div><label for="pReport">리포트 발급</label><input id="pReport" type="number" min="0" step="1" value="0"></div>
+            <div><label for="pDays">무제한 기간(일)</label><input id="pDays" type="number" min="0" step="1" value="0"></div>
+          </div>
+          <p class="form-error" id="productError" role="alert"></p>
+          <button type="submit" class="primary">상품 추가</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>금액권 발급</h3>
+        <form id="codeForm" class="inline-form" novalidate>
+          <label for="codeAmount" class="sr">금액</label>
+          <input id="codeAmount" type="number" min="1000" step="1000" inputmode="numeric" placeholder="금액 (예: 100000)">
+          <label for="codeMemo" class="sr">메모</label>
+          <input id="codeMemo" maxlength="40" autocomplete="off" placeholder="메모 (예: 발표 시연용)">
+          <button type="submit" class="primary">발급</button>
+        </form>
+        <p class="form-error" id="codeError" role="alert"></p>
+        <div id="adminCodes" class="table-wrap"></div>
+      </div>
+      <div class="card">
+        <h3>이용권 직접 지급 (시연용)</h3>
+        <form id="grantForm" class="inline-form" novalidate>
+          <label for="grantAi">AI 횟수</label><input id="grantAi" type="number" min="0" step="1" value="10">
+          <label for="grantReport">리포트 장수</label><input id="grantReport" type="number" min="0" step="1" value="1">
+          <button type="submit" class="primary">지급</button>
+        </form>
+        <p class="form-error" id="grantError" role="alert"></p>
+      </div>
+      <div class="card">
+        <h3>활동 기록</h3>
+        <ul id="adminLog" class="log"></ul>
+        <div class="btn-row">
+          <button type="button" class="danger" data-action="shop-reset">이용권·주문 기록 초기화</button>
+          <button type="button" class="secondary" data-action="admin-logout">로그아웃</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </main>
 
-<footer>© 2026 IEUM · 사업 개발서 기반 시연용 프로토타입 · 법률·세무 자문이 아닙니다 · 실제 개인정보를 입력하지 마세요</footer>
+<!-- 결제창 -->
+<dialog id="checkoutDlg" aria-labelledby="checkoutTitle">
+  <div class="dlg">
+    <div id="checkoutBody"></div>
+  </div>
+</dialog>
+
+<!-- 관리자 로그인 -->
+<dialog id="adminDlg" aria-labelledby="adminDlgTitle">
+  <form class="dlg" id="adminForm" method="dialog" novalidate>
+    <h2 id="adminDlgTitle">관리자 로그인</h2>
+    <p class="muted" id="adminDlgDesc"></p>
+    <label for="adminPw">비밀번호</label>
+    <input id="adminPw" type="password" autocomplete="current-password" minlength="6">
+    <div id="adminPw2Wrap" hidden>
+      <label for="adminPw2">비밀번호 확인</label>
+      <input id="adminPw2" type="password" autocomplete="new-password" minlength="6">
+    </div>
+    <p class="form-error" id="adminError" role="alert"></p>
+    <div class="btn-row">
+      <button type="submit" class="primary" id="adminSubmit" value="ok">로그인</button>
+      <button type="button" class="secondary" data-action="dlg-close" data-dlg="adminDlg">취소</button>
+    </div>
+  </form>
+</dialog>
+
+<footer>© 2026 IEUM · 시연용 프로토타입 · AI 결과는 초안이며 법률·세무 자문이 아닙니다 · 실제 개인정보를 입력하지 마세요</footer>
 
 <script src="logic.js"></script>
+<script src="commerce.js"></script>
+<script src="ai.js"></script>
 <script src="app.js"></script>
+<script src="shop-ui.js"></script>
+<script src="ai-ui.js"></script>
 </body>
 </html>

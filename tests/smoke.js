@@ -35,7 +35,36 @@ async function step(name, fn) {
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-  page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  page.on('console', (m) => {
+    if (m.type() !== 'error') return;
+    const url = (m.location() && m.location().url) || '';
+    if (/jsdelivr/.test(url) || /Failed to load resource/.test(m.text())) return; // 오프라인 테스트 환경의 웹폰트 로드 실패는 무시
+    errors.push('console: ' + m.text());
+  });
+  // 실제 Gemini 대신 가짜 응답 (요청 형식 확인용)
+  const aiCalls = [];
+  let aiMode = 'ok';
+  await page.route('https://generativelanguage.googleapis.com/**', async (route) => {
+    const req = route.request();
+    const body = JSON.parse(req.postData() || '{}');
+    aiCalls.push({ url: req.url(), key: req.headers()['x-goog-api-key'], body });
+    if (aiMode === 'quota') return route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Resource exhausted' } }) });
+    const text = JSON.stringify(body);
+    let out;
+    if (/inlineData/.test(text)) {
+      out = JSON.stringify({ docType: '예금 잔액 증명서', items: [
+        { type: '예금', name: '정기예금 110-234-567890', value: 50000000, asOf: '2026-11-20', evidence: '잔액 50,000,000원', confidence: 'high' },
+        { type: '예금', name: '보통예금', value: 3215400, asOf: '', evidence: '잔액 3,215,400원', confidence: 'medium' }
+      ] });
+    } else if (/상담 준비 브리핑/.test(text)) {
+      out = JSON.stringify({ summary: '가족과 재산 정보가 정리되어 있습니다. 상속세는 약 2억원이 예상됩니다.', missing: ['주식 잔고 확인 자료'], questions: [{ q: '합산 검토 대상 증여는 어떻게 확인하나요?', why: '최근 증여 기록이 있습니다.' }] });
+    } else if (/연결 확인/.test(text)) {
+      out = '연결됨';
+    } else {
+      out = '유류분은 상속인에게 법이 보장하는 최소한의 몫입니다. 지금 증여하시는 게 더 좋습니다. 자세한 내용은 전문가와 확인하세요.';
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: out }] }, finishReason: 'STOP' }] }) });
+  });
   let dialogMsg = '';
   let dialogAccept = true;
   page.on('dialog', async (d) => {
@@ -215,7 +244,7 @@ async function step(name, fn) {
     const full = await page.textContent('#reportDoc');
     assert.match(full, /테스트 예금/);
     assert.match(full, /법률·세무 자문이 아니라/);
-    assert.match(full, /AI를 사용하지 않고/);
+    assert.match(full, /AI 작성 부분은 따로 표시/);
     await page.uncheck('[data-include="assets"]');
     await page.uncheck('[data-include="gifts"]');
     const part = await page.textContent('#reportDoc');
@@ -292,11 +321,253 @@ async function step(name, fn) {
     await page.click('[data-action="contrast"]');
   });
 
+
+  // ===================== 이용권·모의 결제 =====================
+  const wallet = () => page.textContent('#walletChip');
+  await page.evaluate(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
+
+  await step('처음 이용권: AI 3회, 발급권 0장, 리포트는 미리보기', async () => {
+    await page.evaluate(() => localStorage.removeItem('ieum.v1.shop'));
+    await page.reload();
+    await page.evaluate(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
+    assert.match(await wallet(), /AI 3회/);
+    assert.match(await wallet(), /발급권 0장/);
+    await tab('report');
+    assert.equal(await page.locator('#reportDoc.preview').count(), 1);
+    assert.match(await page.textContent('#issueBox'), /발급 전 미리보기/);
+    assert.equal(await page.locator('#issueBox [data-tab="store"]').count(), 1, '발급권이 없으면 구매 버튼');
+  });
+
+  await step('모의 결제: 결제 수단·확인 없이는 진행 안 됨, 완료 후 이용권 지급', async () => {
+    await tab('store');
+    await page.click('#productGrid [data-id="package"]');
+    assert.equal(await page.locator('#checkoutDlg').isVisible(), true);
+    await page.click('#coPay');
+    assert.match(await page.textContent('#coError'), /결제 수단/);
+    await page.check('input[name="coMethod"][value="card"]');
+    await page.click('#coPay');
+    assert.match(await page.textContent('#coError'), /모의 결제임을 확인/);
+    assert.equal(await page.locator('input[name="coMethod"][value="balance"]').isDisabled(), true, '잔액 부족');
+    await page.check('#coAgree');
+    await page.click('#coPay');
+    await page.waitForSelector('text=결제가 완료되었습니다');
+    assert.match(await page.textContent('#checkoutBody'), /IEUM-\d{8}-0001/);
+    await page.click('#checkoutBody [data-action="dlg-close"]');
+    assert.match(await wallet(), /AI 33회/);
+    assert.match(await wallet(), /발급권 1장/);
+    assert.match(await page.textContent('#orderList'), /자산승계 준비 패키지/);
+  });
+
+  await step('리포트 발급: 발급권 1장 사용, 미리보기 해제, 인쇄 호출, 내용 바뀌면 다시 미리보기', async () => {
+    await tab('report');
+    await page.click('#issueBox [data-action="issue"]');
+    assert.equal(await page.locator('#reportDoc.preview').count(), 0);
+    assert.match(await page.textContent('#reportDoc'), /발급번호 IEUM-R-\d{4}-00001/);
+    assert.equal(await page.evaluate(() => window.__printed), 1);
+    assert.match(await wallet(), /발급권 0장/);
+    await page.check('[data-doc="stock"]');
+    assert.equal(await page.locator('#reportDoc.preview').count(), 1);
+    await page.uncheck('[data-doc="stock"]');
+  });
+
+  let giftCode = '';
+  await step('금액권: 선물용 구매 → 코드 발급 → 등록하면 잔액 충전, 재등록 불가', async () => {
+    await tab('store');
+    await page.click('#productGrid [data-id="gift50"]');
+    await page.check('input[name="coMethod"][value="easy"]');
+    await page.check('#coAgree');
+    await page.click('#coPay');
+    await page.waitForSelector('#giftCode');
+    giftCode = (await page.textContent('#giftCode')).trim();
+    assert.match(giftCode, /^IEUM-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+    await page.click('#checkoutBody [data-action="dlg-close"]');
+    await page.fill('#redeemCode', giftCode.toLowerCase());
+    await page.click('#redeemForm button[type="submit"]');
+    assert.match(await page.textContent('#walletView'), /50,000원/);
+    await page.fill('#redeemCode', giftCode);
+    await page.click('#redeemForm button[type="submit"]');
+    assert.match(await page.textContent('#redeemError'), /이미 사용한/);
+  });
+
+  await step('연간 상품 구매 후 미사용 상태에서 환불', async () => {
+    await page.click('#productGrid [data-id="family"]');
+    await page.check('input[name="coMethod"][value="card"]');
+    await page.check('#coAgree');
+    await page.click('#coPay');
+    await page.waitForSelector('text=결제가 완료되었습니다');
+    await page.click('#checkoutBody [data-action="dlg-close"]');
+    assert.match(await wallet(), /리포트 무제한/);
+    const row = page.locator('#orderList tr', { hasText: '가족 기록관리' });
+    await row.locator('[data-action="refund"]').click();
+    assert.match(await row.textContent(), /환불됨/);
+    assert.match(await wallet(), /발급권 0장/);
+    const pkgRow = page.locator('#orderList tr', { hasText: '자산승계 준비 패키지' });
+    assert.equal(await pkgRow.locator('[data-action="refund"]').count(), 0, '발급권을 쓴 주문은 환불 버튼 없음');
+  });
+
+  // ===================== 관리자 =====================
+  await step('관리자: 비밀번호 만들기(불일치 오류) → 관리자 탭 표시, 매출 집계', async () => {
+    assert.equal(await page.locator('#adminTab').isVisible(), false);
+    await page.click('#adminBtn');
+    assert.match(await page.textContent('#adminDlgTitle'), /만들기/);
+    await page.fill('#adminPw', 'demo1234');
+    await page.fill('#adminPw2', 'demo9999');
+    await page.click('#adminSubmit');
+    assert.match(await page.textContent('#adminError'), /서로 다릅니다/);
+    await page.fill('#adminPw2', 'demo1234');
+    await page.click('#adminSubmit');
+    await page.waitForSelector('#adminBody:not([hidden])');
+    assert.equal(await page.locator('#adminTab').isVisible(), true);
+    const stats = await page.textContent('#adminStats');
+    assert.match(stats, /89,000원/);
+    assert.match(stats, /1 \/ 279건/);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ieum.v1.shop')).admin);
+    assert.match(saved.hash, /^[0-9a-f]{64}$/);
+    assert.equal(JSON.stringify(saved).includes('demo1234'), false, '비밀번호 원문 저장 안 함');
+  });
+
+  await step('관리자: 가격 변경·상품 추가·금액권 발급·이용권 지급이 이용자 화면에 반영', async () => {
+    await page.fill('#price-package', '79000');
+    await page.click('[data-action="p-price"][data-id="package"]');
+    await page.fill('#pName', 'AI 추가 10회권');
+    await page.fill('#pPrice', '9900');
+    await page.fill('#pAi', '10');
+    await page.click('#productForm button[type="submit"]');
+    await page.fill('#codeAmount', '100000');
+    await page.fill('#codeMemo', '발표 시연');
+    await page.click('#codeForm button[type="submit"]');
+    assert.match(await page.textContent('#adminCodes'), /IEUM-[A-Z0-9]{4}-[A-Z0-9]{4}/);
+    const before = await wallet();
+    await page.fill('#grantAi', '5');
+    await page.fill('#grantReport', '1');
+    await page.click('#grantForm button[type="submit"]');
+    assert.notEqual(await wallet(), before);
+    assert.match(await wallet(), /발급권 1장/);
+    await tab('store');
+    assert.match(await page.textContent('#productGrid'), /79,000원/);
+    assert.match(await page.textContent('#productGrid'), /AI 추가 10회권/);
+  });
+
+  await step('관리자: 로그아웃 후 틀린 비밀번호는 거부, 맞으면 접속', async () => {
+    await tab('admin');
+    await page.click('[data-action="admin-logout"]');
+    assert.equal(await page.locator('#adminTab').isVisible(), false);
+    await page.click('#adminBtn');
+    await page.fill('#adminPw', 'wrongpass');
+    await page.click('#adminSubmit');
+    assert.match(await page.textContent('#adminError'), /맞지 않습니다/);
+    await page.fill('#adminPw', 'demo1234');
+    await page.click('#adminSubmit');
+    await page.waitForSelector('#adminBody:not([hidden])');
+  });
+
+  // ===================== AI (가짜 응답) =====================
+  await step('AI 키 없이 누르면 안내만 하고 요청하지 않는다', async () => {
+    await tab('assistant');
+    await page.click('#quickQs .chip-q');
+    assert.match(await page.textContent('#chatStatus'), /AI 연결이 아직/);
+    assert.equal(aiCalls.length, 0);
+  });
+
+  await step('관리자 AI 설정: 키 저장(화면에 다시 표시 안 함), 연결 테스트는 횟수 차감 없음', async () => {
+    await tab('admin');
+    await page.fill('#aiKey', 'TEST-KEY-1234');
+    await page.selectOption('#aiModel', 'gemini-3.5-flash-lite');
+    await page.click('#aiKeyForm button[type="submit"]');
+    assert.equal(await page.inputValue('#aiKey'), '');
+    assert.match(await page.getAttribute('#aiKey', 'placeholder'), /1234/);
+    const before = await wallet();
+    await page.click('[data-action="ai-ping"]');
+    await page.waitForFunction(() => /연결됨/.test(document.getElementById('aiKeyStatus').textContent));
+    assert.equal(await wallet(), before);
+    assert.equal(aiCalls.at(-1).key, 'TEST-KEY-1234');
+    assert.match(aiCalls.at(-1).url, /models\/gemini-3\.5-flash-lite:generateContent$/);
+  });
+
+  await step('AI 서류 읽기: 견본 선택 → 동의 → 추출 → 기준일 빠진 항목 검증 → 저장(AI 추출 표시)', async () => {
+    await tab('assets');
+    await page.waitForSelector('#sampleRow .sample');
+    await page.click('#sampleRow [data-id="deposit"]');
+    assert.equal(await page.locator('#aiReadBtn').isDisabled(), true, '동의 전에는 비활성');
+    await page.check('#aiConsent');
+    const aiBefore = Number((await wallet()).match(/AI (\d+)회/)[1]);
+    await page.click('#aiReadBtn');
+    await page.waitForSelector('#aiReviewForm');
+    const sent = aiCalls.at(-1).body;
+    assert.equal(sent.contents[0].parts[0].inlineData.mimeType, 'image/jpeg');
+    assert.ok(sent.generationConfig.responseSchema);
+    assert.equal(await page.locator('.extract-item').count(), 2);
+    assert.equal(await page.inputValue('#x-name-0'), '정기예금 ••••', '계좌번호 가림');
+    await page.check('[data-x="verified"][data-i="0"]');
+    await page.click('#aiReviewForm button[type="submit"]');
+    assert.match(await page.textContent('#aiReviewError'), /항목 2: 기준일/);
+    await page.fill('#x-asof-1', '2026-11-20');
+    await page.click('#aiReviewForm button[type="submit"]');
+    const assets = (await stateOf()).assets.filter((a) => a.src === 'ai');
+    assert.equal(assets.length, 2);
+    assert.equal(assets[0].status, '직접 확인');
+    assert.equal(assets[1].status, '나중에 확인');
+    assert.equal(await page.locator('#assetList .badge.ai').count(), 2);
+    assert.equal(Number((await wallet()).match(/AI (\d+)회/)[1]), aiBefore - 1);
+  });
+
+  await step('AI 상담 브리핑: 안전장치가 세액 추정 문장을 가리고 리포트에 AI 작성 표시', async () => {
+    await tab('report');
+    await page.click('#aiBriefBtn');
+    await page.waitForFunction(() => /브리핑을 만들었습니다/.test(document.getElementById('aiBriefStatus').textContent));
+    const sent = JSON.stringify(aiCalls.at(-1).body);
+    assert.match(sent, /상담 준비 브리핑/);
+    const view = await page.textContent('#aiBriefView');
+    assert.doesNotMatch(view, /2억원/);
+    assert.match(view, /전문가 확인이 필요한 내용이라/);
+    assert.match(view, /1개 문장을 걸렀습니다/);
+    assert.match(await page.textContent('#reportDoc'), /\d+\. AI 상담 브리핑\s*AI 작성/);
+    await page.uncheck('[data-include="ai"]');
+    assert.doesNotMatch(await page.textContent('#reportDoc'), /\d+\. AI 상담 브리핑/);
+    await page.check('[data-include="ai"]');
+  });
+
+  await step('AI 브리핑 요청에는 리포트에서 뺀 항목이 들어가지 않는다', async () => {
+    await page.uncheck('[data-include="assets"]');
+    await page.click('#aiBriefBtn');
+    await page.waitForFunction(() => /브리핑을 만들었습니다/.test(document.getElementById('aiBriefStatus').textContent));
+    assert.doesNotMatch(JSON.stringify(aiCalls.at(-1).body), /재산채무/);
+    await page.check('[data-include="assets"]');
+  });
+
+  await step('AI 도우미: 답변 표시 + 유불리 권유 문장 차단, 실패 시 횟수 차감 없음', async () => {
+    await tab('assistant');
+    await page.click('#quickQs .chip-q');
+    await page.waitForSelector('.msg.ai');
+    const ans = await page.textContent('.msg.ai .bubble');
+    assert.match(ans, /유류분은/);
+    assert.doesNotMatch(ans, /더 좋습니다/);
+    assert.match(ans, /1개 문장을 걸렀습니다/);
+    aiMode = 'quota';
+    const before = await wallet();
+    await page.fill('#chatInput', '다른 질문');
+    await page.click('#chatSend');
+    await page.waitForSelector('.msg.sys');
+    assert.match(await page.textContent('.msg.sys'), /무료 사용량/);
+    assert.equal(await wallet(), before);
+    aiMode = 'ok';
+  });
+
+  await step('내려받은 데이터 파일에 API 키·관리자 정보가 없다', async () => {
+    await tab('data');
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.click('[data-action="export"]')]);
+    const file = path.join(os.tmpdir(), 'ieum-smoke2.json');
+    await dl.saveAs(file);
+    const txt = fs.readFileSync(file, 'utf8');
+    assert.equal(txt.includes('TEST-KEY'), false);
+    assert.equal(txt.includes('hash'), false);
+  });
+
   await step('모바일 폭(375px)에서 모든 탭이 가로로 넘치지 않는다', async () => {
     await tab('home');
     await page.click('.hero [data-action="load-sample"]');
     await page.setViewportSize({ width: 375, height: 800 });
-    const ids = ['home', 'family', 'assets', 'check', 'scenario', 'will', 'report', 'data'];
+    const ids = ['home', 'family', 'assets', 'check', 'scenario', 'will', 'report', 'assistant', 'store', 'data', 'admin'];
     for (const id of ids) {
       await tab(id);
       const over = await page.evaluate(() => {

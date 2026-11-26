@@ -11,7 +11,8 @@
   const h = L.escapeHTML;
   const KEY = 'ieum.v1.state';
   const PREF_KEY = 'ieum.v1.prefs';
-  const TAB_IDS = ['home', 'family', 'assets', 'check', 'scenario', 'will', 'report', 'data'];
+  const TAB_IDS = ['home', 'family', 'assets', 'check', 'scenario', 'will', 'report', 'assistant', 'store', 'data', 'admin'];
+  const renderHooks = [];
   const SOURCES = {
     flow: { name: '국세청 상속세 세액계산 흐름도', url: 'https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2326&cntntsId=7720' },
     onestop: { name: '정부24 안심상속', url: 'https://www.gov.kr/portal/onestopSvc/safeInheritance' }
@@ -541,6 +542,7 @@
             const sb = a.status === '직접 확인' ? 'ok' : 'warn';
             return (
               '<li><div class="main"><b>' + h(a.name) + '</b><span class="badge info">' + h(a.type) + '</span>' +
+              (a.src === 'ai' ? '<span class="badge ai">AI 추출</span>' : '') +
               '<span class="badge ' + sb + '">' + h(a.status) + '</span>' +
               (stale ? '<span class="badge warn">기준일 1년 초과</span>' : '') +
               '<div class="sub">' + money(a.value) + ' · 기준일 ' + h(a.asOf) + '</div></div>' +
@@ -743,7 +745,56 @@
     return copy;
   }
 
-  function buildReportHTML() {
+  // 리포트 내용이 바뀌었는지 판단하는 지문 (발급·AI 브리핑의 유효성 확인용)
+  function hashStr(str) {
+    let x = 5381;
+    for (let i = 0; i < str.length; i++) x = ((x << 5) + x + str.charCodeAt(i)) | 0;
+    return (x >>> 0).toString(36);
+  }
+  function factsStamp() {
+    return hashStr(JSON.stringify(aiFacts()));
+  }
+  function contentStamp() {
+    return hashStr(JSON.stringify([state.families, state.assets, state.gifts, state.confirm, state.will, state.docs, state.assumeDate, state.report.include, state.ai.briefing]));
+  }
+
+  // AI에게 보낼 정보: 리포트에 포함하기로 한 항목만, 가명 그대로. 식별번호는 원래 받지 않는다.
+  function aiFacts() {
+    const today = L.todayStr();
+    const inc = state.report.include;
+    const view = reportView();
+    const r = L.readiness(view, today);
+    const f = { 기준일: today, 준비점수: r.score + '/100' };
+    if (inc.family) f.가족 = state.families.map(function (x) { return { 관계: x.relation, 이름: x.name }; });
+    if (inc.assets) {
+      f.재산채무 = state.assets.map(function (a) { return { 분류: a.type, 항목: a.name, 금액: L.formatKRW(a.value), 기준일: a.asOf, 확인상태: a.status }; });
+      f.합계 = { 재산: L.formatKRW(r.totals.assetTotal), 채무: L.formatKRW(r.totals.debtTotal) };
+    }
+    if (inc.gifts) {
+      f.과거증여 = r.review.map(function (g) { return { 받은사람관계: g.relation, 증여일: g.date, 금액: L.formatKRW(g.value), 합산검토분류: REVIEW_LABEL[g.status] }; });
+      f.가정기준일 = r.assumeDate;
+    }
+    if (inc.will) f.유언의사 = state.will.items.length + '건 정리, 관심 방식 ' + state.will.method;
+    f.보완필요 = r.items.filter(function (i) { return !i.done; }).map(function (i) { return i.label + ': ' + i.detail; });
+    f.확인필요 = r.flags.map(function (x) { return x.text; });
+    return f;
+  }
+
+  function briefingHTML(b, forReport) {
+    if (!b) return '';
+    let out = '<p>' + h(b.summary) + '</p>';
+    if (b.missing.length) out += '<p><b>상담 전에 더 챙기면 좋은 것</b></p><ul>' + b.missing.map(function (m) { return '<li>' + h(m) + '</li>'; }).join('') + '</ul>';
+    if (b.questions.length) {
+      out += '<p><b>전문가에게 물어볼 질문</b></p><ol>' + b.questions.map(function (q) {
+        return '<li>' + h(q.q) + (q.why ? '<br><span class="sub">이유: ' + h(q.why) + '</span>' : '') + '</li>';
+      }).join('') + '</ol>';
+    }
+    out += '<p class="' + (forReport ? 'meta' : 'muted') + '">AI 작성 초안 (' + h(b.model || 'Gemini') + ', ' + h(fmtTime(b.at)) + ') · 사실 여부는 전문가와 확인하세요.' +
+      (b.removed ? ' 규칙 안전장치가 ' + b.removed + '개 문장을 걸렀습니다.' : '') + '</p>';
+    return out;
+  }
+
+  function buildReportHTML(issue) {
     const today = L.todayStr();
     const inc = state.report.include;
     const view = reportView();
@@ -751,10 +802,11 @@
     const excluded = [['family', '가족'], ['assets', '재산·채무'], ['gifts', '과거 증여'], ['will', '유언 의사']]
       .filter(function (x) { return !inc[x[0]]; })
       .map(function (x) { return x[1]; });
-    let out = '<h2>상담 준비 리포트</h2>';
-    out += '<p class="meta">작성일 ' + h(today) + ' · 이음(IEUM) 시연용 프로토타입으로 작성' + (state.sample ? ' · <b>가상 샘플 데이터 (실제 정보 아님)</b>' : '') + '</p>';
+    let out = '<div class="doc-head"><h2>상담 준비 리포트</h2>' +
+      (issue ? '<span class="issue-no">발급번호 ' + h(issue.no) + '</span>' : '<span class="issue-no preview-tag">미리보기 · 발급 전</span>') + '</div>';
+    out += '<p class="meta">작성일 ' + h(today) + (issue ? ' · 발급 ' + h(fmtTime(issue.at)) : '') + ' · 이음(IEUM) 시연용 프로토타입으로 작성' + (state.sample ? ' · <b>가상 샘플 데이터 (실제 정보 아님)</b>' : '') + '</p>';
     out +=
-      '<div class="disclaimer">이 문서는 법률·세무 자문이 아니라, 이용자가 직접 입력한 정보를 정리한 상담 준비 자료입니다. AI를 사용하지 않고 고정된 규칙으로 분류했으며, 세액은 계산하지 않았습니다. 금액은 이용자가 입력한 값으로 세법상 평가액이 아닙니다.</div>';
+      '<div class="disclaimer">이 문서는 법률·세무 자문이 아니라, 이용자가 직접 입력한 정보를 정리한 상담 준비 자료입니다. 점수와 합산 검토 분류는 고정된 규칙으로, "AI 상담 브리핑"은 생성형 AI로 작성했으며 AI 작성 부분은 따로 표시했습니다. 세액은 계산하지 않았고, 금액은 이용자가 입력한 값으로 세법상 평가액이 아닙니다.</div>';
 
     out += '<h3>1. 준비 현황</h3>';
     out += excluded.length
@@ -800,6 +852,11 @@
       out += '<p>관심 있는 유언 방식: ' + h(state.will.method) + (g ? ' (' + h(g.law) + ')' : '') + '. 법정 방식을 지켜야 효력이 생기며 유효성 판단은 전문가의 몫입니다.</p>';
     }
 
+    if (inc.ai && state.ai.briefing) {
+      out += '<h3>' + n++ + '. AI 상담 브리핑 <span class="badge ai">AI 작성</span></h3>';
+      out += briefingHTML(state.ai.briefing, true);
+    }
+
     out += '<h3>' + n++ + '. 확인이 필요한 사항</h3>';
     out += r.flags.length ? '<ul>' + r.flags.map(function (f) { return '<li>' + h(f.text) + '</li>'; }).join('') + '</ul>' : '<p>표시할 사항이 없습니다.</p>';
 
@@ -825,7 +882,63 @@
 
   function renderReport() {
     document.querySelectorAll('[data-include]').forEach(function (c) { c.checked = !!state.report.include[c.dataset.include]; });
-    $('reportDoc').innerHTML = buildReportHTML();
+    const S = window.IEUM_STORE;
+    const issue = S ? S.activeIssue(contentStamp()) : null;
+    const doc = $('reportDoc');
+    doc.innerHTML = buildReportHTML(issue);
+    doc.classList.toggle('preview', !issue);
+    renderIssueBox(issue);
+    renderBriefing();
+  }
+
+  function renderIssueBox(issue) {
+    const S = window.IEUM_STORE;
+    const box = $('issueBox');
+    if (!S) {
+      box.innerHTML = '';
+      return;
+    }
+    if (issue) {
+      box.innerHTML =
+        '<div class="issue-row"><div><span class="badge ok">발급 완료</span> <b>' + h(issue.no) + '</b><div class="sub">' + h(fmtTime(issue.at)) +
+        (issue.unlimited ? ' · 연간 플랜으로 발급' : '') + ' · 내용을 바꾸면 다시 발급해야 합니다.</div></div>' +
+        '<button type="button" class="primary" data-action="print">인쇄하거나 PDF로 저장</button></div>';
+      return;
+    }
+    const can = S.canIssue();
+    box.innerHTML =
+      '<div class="issue-row"><div><b>발급 전 미리보기입니다.</b><div class="sub">발급하면 "미리보기" 표시가 사라지고 발급번호가 붙습니다. ' +
+      h(S.issueHint()) + '</div></div>' +
+      (can
+        ? '<button type="button" class="primary" data-action="issue">리포트 발급하기</button>'
+        : '<button type="button" class="primary" data-action="tab" data-tab="store">발급권 구매하기</button>') +
+      '</div>';
+  }
+
+  function renderBriefing() {
+    const b = state.ai.briefing;
+    const view = $('aiBriefView');
+    if (!view) return;
+    $('aiBriefDel').hidden = !b;
+    if (!b) {
+      view.innerHTML = '';
+      return;
+    }
+    const stale = b.stamp && b.stamp !== factsStamp();
+    view.innerHTML = '<div class="brief">' + (stale ? '<p class="notice">브리핑을 만든 뒤 입력 내용이 바뀌었습니다. 다시 만드는 것을 권합니다.</p>' : '') + briefingHTML(b, false) + '</div>';
+  }
+
+  function issueReport() {
+    const S = window.IEUM_STORE;
+    if (!S) return;
+    const r = S.issue(contentStamp());
+    if (!r.ok) {
+      window.alert(r.error);
+      return;
+    }
+    renderReport();
+    announce('리포트를 발급했습니다. 발급번호 ' + r.issue.no);
+    printReport();
   }
 
   function renderDocs() {
@@ -862,6 +975,7 @@
     renderDocs();
     renderReport();
     renderData();
+    renderHooks.forEach(function (fn) { fn(); });
   }
 
   // 체크박스 포커스를 유지하기 위해 서류 목록은 다시 그리지 않는다.
@@ -962,6 +1076,7 @@
   function onClick(e) {
     const el = e.target.closest('[data-action]');
     if (!el) return;
+    if (el.tagName === 'A') e.preventDefault();
     const act = el.dataset.action;
     if (act === 'tab') navigate(el.dataset.tab);
     else if (act === 'size') {
@@ -991,6 +1106,7 @@
     else if (act === 'import') $('importFile').click();
     else if (act === 'reset-all') resetAll();
     else if (act === 'print') printReport();
+    else if (act === 'issue') issueReport();
   }
 
   function onChange(e) {
@@ -1103,6 +1219,32 @@
     const first = location.hash.slice(1);
     showTab(TAB_IDS.indexOf(first) >= 0 ? first : 'home', false);
   }
+
+  // 다른 화면 모듈(shop-ui.js, ai-ui.js)이 쓰는 내부 기능
+  window.IEUM_APP = {
+    state: function () { return state; },
+    save: save,
+    commit: commit,
+    renderAll: renderAll,
+    renderReport: renderReport,
+    navigate: navigate,
+    announce: announce,
+    hasData: hasData,
+    aiFacts: aiFacts,
+    factsStamp: factsStamp,
+    contentStamp: contentStamp,
+    fmtTime: fmtTime,
+    onRender: function (fn) { renderHooks.push(fn); },
+    addAssets: function (items) {
+      items.forEach(function (it) { state.assets.push(Object.assign({ id: L.uid() }, it)); });
+      if (items.some(function (it) { return it.type === '채무'; })) state.confirm.noDebt = false;
+      commit(items.length + '건을 재산 목록에 저장했습니다.');
+    },
+    setBriefing: function (b) {
+      state.ai.briefing = b;
+      commit(b ? 'AI 상담 브리핑을 만들었습니다.' : 'AI 상담 브리핑을 지웠습니다.');
+    }
+  };
 
   init();
 })();
