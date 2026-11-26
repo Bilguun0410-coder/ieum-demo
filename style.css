@@ -1,0 +1,336 @@
+/* =========================================================
+   이음 IEUM - 스타일
+   ========================================================= */
+
+:root {
+  font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
+  color: #203047;
+  background: #f5f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+/* ---------- 헤더 ---------- */
+header {
+  background: #fff;
+  border-bottom: 1px solid #e5e9f0;
+  padding: 18px max(24px, calc((100vw - 1100px) / 2));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+header strong {
+  font-size: 24px;
+  color: #147d77;
+}
+
+header span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* ---------- 레이아웃 ---------- */
+.wrap {
+  max-width: 1100px;
+  margin: auto;
+  padding: 32px 22px;
+}
+
+.hero {
+  background: linear-gradient(120deg, #086b68, #239f91);
+  color: white;
+  padding: 48px 36px;
+  border-radius: 22px;
+}
+
+.hero h1 {
+  font-size: 34px;
+  margin: 8px 0;
+}
+
+.hero p {
+  line-height: 1.8;
+  opacity: 0.95;
+}
+
+.tag {
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+
+/* ---------- 탭 / 버튼 ---------- */
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+
+.tabs button,
+button.primary {
+  cursor: pointer;
+  border: 1px solid #d8e1e9;
+  border-radius: 10px;
+  padding: 12px 17px;
+  background: white;
+  color: #234;
+  font-weight: 700;
+}
+
+.tabs button.active,
+button.primary {
+  background: #147d77;
+  color: white;
+  border-color: #147d77;
+}
+
+.btn-quiet {
+  border: 1px solid #dce6e7;
+  background: #fff;
+  color: #365;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.small {
+  padding: 7px 11px !important;
+  font-size: 12px;
+}
+
+/* ---------- 패널 / 카드 ---------- */
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.card {
+  background: white;
+  padding: 22px;
+  border-radius: 16px;
+  border: 1px solid #e7ebf1;
+  margin-bottom: 16px;
+}
+
+.card h3 {
+  margin-top: 0;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.number {
+  font-size: 30px;
+  color: #147d77;
+  font-weight: 800;
+}
+
+.kpi {
+  color: #12756d;
+  font-weight: 800;
+  font-size: 28px;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.item {
+  padding: 13px 0;
+  border-bottom: 1px solid #edf0f4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.item:last-child {
+  border: 0;
+}
+
+.pill {
+  background: #e5f5f1;
+  color: #087469;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.stat {
+  display: inline-block;
+  background: #eaf6f2;
+  color: #087469;
+  padding: 5px 9px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.summary > div {
+  border: 1px solid #dbe9e6;
+  border-radius: 12px;
+  padding: 18px;
+  background: #f6fbf9;
+}
+
+.summary b {
+  display: block;
+  color: #12756d;
+  font-size: 22px;
+  margin-top: 6px;
+}
+
+/* ---------- 폼 ---------- */
+input,
+select {
+  padding: 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  max-width: 100%;
+  width: 100%;
+  margin: 5px 0 12px;
+}
+
+input[type=number] {
+  font-variant-numeric: tabular-nums;
+}
+
+textarea {
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  width: 100%;
+  min-height: 85px;
+  margin: 6px 0 12px;
+  font: inherit;
+  resize: vertical;
+}
+
+label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.row > * {
+  flex: 1;
+}
+
+/* ---------- 안내 박스 ---------- */
+.warning {
+  background: #fff8e8;
+  padding: 14px;
+  border-radius: 10px;
+  color: #79531d;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.safe {
+  background: #f3f8fc;
+  color: #264b69;
+  border-radius: 10px;
+  padding: 12px 15px;
+  line-height: 1.7;
+  font-size: 13px;
+}
+
+footer {
+  text-align: center;
+  padding: 30px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+/* ---------- 모바일 ---------- */
+@media (max-width: 700px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    padding: 30px 22px;
+  }
+
+  .hero h1 {
+    font-size: 26px;
+  }
+
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- 인쇄 (리포트만 출력) ---------- */
+@media print {
+  header,
+  .hero,
+  .tabs,
+  footer,
+  form,
+  button,
+  .warning,
+  .safe {
+    display: none !important;
+  }
+
+  .panel {
+    display: none !important;
+  }
+
+  #report {
+    display: block !important;
+  }
+
+  .wrap {
+    padding: 0;
+  }
+
+  .card {
+    border: 0;
+    padding: 8px 0;
+    margin: 0;
+  }
+
+  body {
+    background: #fff;
+    color: #111;
+  }
+}
