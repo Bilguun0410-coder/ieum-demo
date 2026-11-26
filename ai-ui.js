@@ -44,6 +44,9 @@
       model: settings.model,
       onRetry: function (i, n) {
         setStatus(statusId, 'Google AI 서버가 혼잡해 잠시 뒤 다시 시도하는 중입니다 (' + i + '/' + n + ')…');
+      },
+      onFallback: function (m) {
+        setStatus(statusId, '선택한 모델이 혼잡해 예비 모델(' + m + ')로 다시 시도하는 중입니다…');
       }
     };
   }
@@ -97,7 +100,7 @@
   function loadSamples(cb) {
     if (window.IEUM_SAMPLES) return cb();
     const s = document.createElement('script');
-    s.src = 'samples.js?v=4';
+    s.src = 'samples.js?v=5';
     s.onload = cb;
     s.onerror = function () { $('sampleRow').innerHTML = '<p class="muted">견본 서류를 불러오지 못했습니다.</p>'; };
     document.body.appendChild(s);
@@ -405,7 +408,7 @@
       // 저장 전이라도 칸에 입력한 키가 있으면 그 키로 확인한다 (저장은 하지 않음)
       const typed = $('aiKey').value.trim();
       const model = $('aiModel').value.trim() || settings.model;
-      setStatus('aiKeyStatus', '연결을 확인하는 중… (최대 1~2분)');
+      setStatus('aiKeyStatus', '연결을 확인하는 중… (최대 1분)');
       AI.ping(Object.assign(opts('aiKeyStatus', typed), { model: model })).then(function (r) {
         setStatus('aiKeyStatus', r.ok
           ? '연결됨 · 모델 ' + r.model + ' (AI 이용 횟수는 차감하지 않음)' + (typed ? ' · 입력한 키는 아직 저장되지 않았습니다. "저장"을 누르세요.' : '')

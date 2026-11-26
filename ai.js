@@ -13,6 +13,8 @@
   // 기본값은 Google AI Studio의 기본 모델. 목록에 없는 모델은 관리자 화면에서 직접 입력할 수 있다.
   const MODELS = ['gemini-4-hydrogen', 'gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
   const DEFAULT_MODEL = MODELS[0];
+  // 고른 모델이 혼잡하면 한 번 더 시도할 예비 모델
+  const FALLBACK_MODELS = ['gemini-3.5-flash-lite'];
   const ASSET_TYPES = ['부동산', '예금', '주식', '보험', '기타', '채무'];
   const CONFIDENCE = ['high', 'medium', 'low'];
   const MAX_AMOUNT = 9999999999999;
@@ -302,8 +304,24 @@
     return new Promise(function (r) { setTimeout(r, ms); });
   }
 
-  // 혼잡(5xx)·일시적 한도(429)면 잠시 뒤 다시 보낸다. 같은 내용을 다시 보낼 뿐 추가 정보는 없다.
+  function busy(r) {
+    return !r.ok && (r.code === 'server' || r.code === 'quota' || r.code === 'timeout');
+  }
+
+  // 고른 모델로 재시도까지 실패하면(혼잡·한도·시간 초과) 예비 모델로 한 번 더 보낸다.
   async function call(opts) {
+    let r = await callWithRetries(opts);
+    const first = opts.model;
+    const fallbacks = (Array.isArray(opts.fallbackModels) ? opts.fallbackModels : FALLBACK_MODELS).filter(function (m) { return m !== first; });
+    for (let i = 0; i < fallbacks.length && busy(r); i++) {
+      if (opts.onFallback) opts.onFallback(fallbacks[i], r);
+      r = await callWithRetries(Object.assign({}, opts, { model: fallbacks[i], retryDelays: [2000] }));
+    }
+    return r;
+  }
+
+  // 혼잡(5xx)·일시적 한도(429)면 잠시 뒤 다시 보낸다. 같은 내용을 다시 보낼 뿐 추가 정보는 없다.
+  async function callWithRetries(opts) {
     const delays = Array.isArray(opts.retryDelays) ? opts.retryDelays : [2000, 5000];
     const sleep = opts.sleep || wait;
     let r = await callOnce(opts);
@@ -322,7 +340,7 @@
     const doFetch = opts.fetch || (typeof fetch !== 'undefined' ? fetch.bind(root) : null);
     if (!doFetch) return { ok: false, code: 'network', error: '이 환경에서는 AI를 호출할 수 없습니다.' };
     const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, opts.timeoutMs || 90000) : null;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, opts.timeoutMs || 60000) : null;
     let res;
     try {
       res = await doFetch(ENDPOINT + encodeURIComponent(model) + ':generateContent', {
@@ -381,8 +399,9 @@
     return Object.assign(parseChat(r.text), { model: r.model });
   }
 
+  // 연결 테스트는 고른 모델 자체를 확인하므로 예비 모델로 바꾸지 않는다.
   async function ping(opts) {
-    const r = await call(Object.assign({}, opts, {
+    const r = await call(Object.assign({}, opts, { fallbackModels: [] }, {
       body: { contents: [{ role: 'user', parts: [{ text: '연결 확인입니다. "연결됨"이라고만 답하세요.' }] }], generationConfig: { temperature: 0 } }
     }));
     return r.ok ? { ok: true, model: r.model, text: r.text.slice(0, 40) } : r;
@@ -392,6 +411,7 @@
     ENDPOINT: ENDPOINT,
     MODELS: MODELS,
     DEFAULT_MODEL: DEFAULT_MODEL,
+    FALLBACK_MODELS: FALLBACK_MODELS,
     MAX_IMAGE_BYTES: MAX_IMAGE_BYTES,
     BLOCKED: BLOCKED,
     SYSTEM_RULES: SYSTEM_RULES,

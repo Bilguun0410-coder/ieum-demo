@@ -173,3 +173,22 @@ test('호출: 키 오류(403)는 다시 시도하지 않는다', async () => {
   await A.ping({ key: 'K', fetch: f, sleep: async () => {} });
   assert.equal(f.calls.length, 1);
 });
+
+test('호출: 재시도까지 혼잡하면 예비 모델로 바꿔 한 번 더 시도한다', async () => {
+  const f = fakeFetch((n, url) => (/gemini-4-hydrogen/.test(url) ? { status: 503, body: { error: { message: 'high demand' } } } : { status: 200, body: geminiReply('답') }));
+  const used = [];
+  const r = await A.chat({ key: 'K', model: 'gemini-4-hydrogen', fetch: f, sleep: async () => {}, onFallback: (m) => used.push(m) }, [], '질문', null);
+  assert.equal(r.ok, true);
+  assert.equal(r.model, 'gemini-3.5-flash-lite');
+  assert.deepEqual(used, ['gemini-3.5-flash-lite']);
+  assert.equal(f.calls.length, 4, '원래 모델 3번 + 예비 모델 1번');
+});
+
+test('호출: 키 오류나 연결 테스트는 예비 모델로 바꾸지 않는다', async () => {
+  const f1 = fakeFetch(() => ({ status: 403, body: { error: { message: 'bad key' } } }));
+  await A.chat({ key: 'K', model: 'gemini-4-hydrogen', fetch: f1, sleep: async () => {} }, [], '질문', null);
+  assert.equal(f1.calls.length, 1);
+  const f2 = fakeFetch(() => ({ status: 503, body: { error: { message: 'high demand' } } }));
+  await A.ping({ key: 'K', model: 'gemini-4-hydrogen', fetch: f2, sleep: async () => {} });
+  assert.ok(f2.calls.every((c) => /gemini-4-hydrogen/.test(c.url)));
+});
