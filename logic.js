@@ -134,7 +134,8 @@
       docs: {},
       assumeDate: '',
       scenario: 'A',
-      report: { include: { family: true, assets: true, gifts: true, will: true } },
+      report: { include: { family: true, assets: true, gifts: true, will: true, ai: true } },
+      ai: { briefing: null },
       pilot: { price: '' },
       meta: { createdAt: now, updatedAt: now }
     };
@@ -188,6 +189,7 @@
           asOf: a.asOf,
           status: STATUSES.indexOf(a.status) >= 0 ? a.status : '나중에 확인'
         });
+        if (a.src === 'ai') s.assets[s.assets.length - 1].src = 'ai';
       } else dropped++;
     });
 
@@ -234,6 +236,20 @@
       Object.keys(s.report.include).forEach(function (k) {
         if (typeof raw.report.include[k] === 'boolean') s.report.include[k] = raw.report.include[k];
       });
+    }
+    if (raw.ai && raw.ai.briefing && typeof raw.ai.briefing === 'object' && typeof raw.ai.briefing.summary === 'string') {
+      const b = raw.ai.briefing;
+      s.ai.briefing = {
+        summary: cleanStr(b.summary, 1200),
+        missing: list(b.missing, 6).map(function (m) { return cleanStr(m, 200); }).filter(Boolean),
+        questions: list(b.questions, 8)
+          .filter(function (q) { return q && typeof q.q === 'string'; })
+          .map(function (q) { return { q: cleanStr(q.q, 200), why: cleanStr(q.why, 200) }; }),
+        removed: Number.isSafeInteger(b.removed) && b.removed >= 0 ? b.removed : 0,
+        model: cleanStr(b.model, 60),
+        at: cleanStr(b.at, 40),
+        stamp: cleanStr(b.stamp, 40)
+      };
     }
     if (raw.pilot && PRICE_CHOICES.indexOf(raw.pilot.price) >= 0) s.pilot.price = raw.pilot.price;
     s.sample = raw.sample === true;
