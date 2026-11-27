@@ -192,3 +192,25 @@ test('호출: 키 오류나 연결 테스트는 예비 모델로 바꾸지 않�
   await A.ping({ key: 'K', model: 'gemini-4-hydrogen', fetch: f2, sleep: async () => {} });
   assert.ok(f2.calls.every((c) => /gemini-4-hydrogen/.test(c.url)));
 });
+
+test('도우미 지시: 거절 후 앱 기능·확인 질문·메뉴 안내로 이어지게 함', () => {
+  const sys = A.buildChatRequest([], '3억을 자식에게 물려주는 가장 좋은 방법은?', null).systemInstruction.parts[0].text;
+  assert.match(sys, /이유는 한 문장으로만/);
+  assert.match(sys, /질문을 2~3개/);
+  assert.match(sys, /④ 시나리오 비교/);
+  assert.match(sys, /되풀이하지 말고/);
+});
+
+test('도우미 답변: 메뉴 이름을 바로가기로 바꾸고, 좋은 안내 문장은 안전장치에 걸리지 않음', () => {
+  const good = [
+    '어떤 방법을 고를지는 세무사·변호사와 정하실 일이라, 이 앱에서는 정해 드리지 않습니다.',
+    '대신 3억 원을 지금 일부 증여할 때와 나중에 상속할 때 확인할 점을 나란히 정리해 드릴 수 있습니다.',
+    '1. 배우자분이 계신가요? 2. 재산이 주로 집인가요, 예금인가요? 3. 이미 넘겨주신 재산이 있나요?',
+    '알려 주시면 ④ 시나리오 비교에서 나란히 보여 드리고, ⑥ 상담 리포트로 정리해 드릴게요.'
+  ].join(' ');
+  const r = A.parseChat(good);
+  assert.equal(r.removed.length, 0);
+  assert.deepEqual(r.links.map((l) => l.tab), ['scenario', 'report']);
+  assert.deepEqual(A.menuLinks('유류분은 상속인의 최소 몫입니다.'), []);
+  assert.deepEqual(A.menuLinks('준비 점검, 시나리오 비교, 상담 리포트').length, 2);
+});

@@ -147,6 +147,41 @@
     return withSchema(body, useSchema === false ? null : BRIEFING_SCHEMA);
   }
 
+  // 도우미(채팅) 전용 답변 방식. 거절만 하고 끝내지 않고, 앱이 해 줄 수 있는 일로 이어 준다.
+  const CHAT_RULES = [
+    '7. 답은 5문장 이내로 짧게 합니다. 목록이 필요하면 3개 이내로 씁니다. 마크다운 기호(*, #)는 쓰지 않습니다.',
+    '8. "무엇이 가장 좋은지", "어떻게 하는 게 맞는지"처럼 판단을 묻는 질문에는 이 순서로 답합니다.',
+    '   (1) 정해 드리지 못하는 이유는 한 문장으로만 말합니다. 예: "어떤 방법을 고를지는 세무사·변호사와 정하실 일이라, 이 앱에서는 정해 드리지 않습니다." ("어느 쪽이 좋다"처럼 비교하는 표현은 안전장치에 걸리므로 쓰지 않습니다.)',
+    '   (2) 바로 이어서 이 앱이 대신 해 드릴 수 있는 일을 말합니다.',
+    '   (3) 상황을 알기 위한 질문을 2~3개, 번호를 붙여 묻습니다. 예: 배우자분이 계신지, 자녀분이 몇 명인지, 재산이 주로 집·땅인지 예금인지, 이미 넘겨준 재산이 있는지.',
+    '   (4) 마지막 문장에서 아래 메뉴 이름 중 하나를 그대로 적어 다음에 갈 곳을 안내합니다.',
+    '9. 이용자가 말한 금액이나 사정이 있으면 무시하지 말고, 그 상황에서 무엇을 확인해야 하는지에 연결합니다. 단 세금 액수와 유불리는 말하지 않습니다.',
+    '10. "이 앱은 뭘 해 주나요" 같은 질문이나 불만에는 같은 설명을 되풀이하지 말고, 앱이 하는 일을 구체적으로 말합니다: 가족·재산 정리, 빠진 정보 점검, 증여와 상속을 나란히 놓고 확인할 점 비교, 남기고 싶은 뜻 정리, 전문가 상담 때 그대로 내밀 리포트 만들기.',
+    '11. "전문가에게 확인하세요"는 한 답에 한 번만 씁니다.',
+    '12. "추천", "권장", "유리", "불리", "더 좋다" 같은 말은 쓰지 않습니다.',
+    '앱 메뉴: ① 가족(가족 관계 입력), ② 재산·증여(재산·과거 증여 기록, 서류 사진 읽기), ③ 준비 점검(빠진 정보와 사전증여 합산 검토 대상 분류), ④ 시나리오 비교(지금 일부 증여 / 나중에 상속 / 가족별 배분을 나란히 비교), ⑤ 유언 의사(남기고 싶은 뜻 정리, 법적 효력 없음), ⑥ 상담 리포트(전문가 상담용 자료와 질문 정리)'
+  ].join('\n');
+
+  // 답변에 적힌 메뉴 이름을 찾아 바로가기 버튼으로 쓸 탭 id를 돌려준다. (최대 2개, 나온 순서대로)
+  const MENU_LINKS = [
+    { tab: 'family', label: '① 가족', re: /①\s*가족|가족\s*메뉴|가족\s*화면/ },
+    { tab: 'assets', label: '② 재산·증여', re: /②\s*재산|재산[·ㆍ・,\s]*증여\s*(메뉴|화면)?/ },
+    { tab: 'check', label: '③ 준비 점검', re: /③\s*준비|준비\s*점검/ },
+    { tab: 'scenario', label: '④ 시나리오 비교', re: /④\s*시나리오|시나리오\s*비교/ },
+    { tab: 'will', label: '⑤ 유언 의사', re: /⑤\s*유언|유언\s*의사\s*(메뉴|화면|정리)/ },
+    { tab: 'report', label: '⑥ 상담 리포트', re: /⑥\s*상담|상담\s*리포트/ }
+  ];
+
+  function menuLinks(text) {
+    const s = String(text || '');
+    return MENU_LINKS
+      .map(function (m) { const i = s.search(m.re); return { tab: m.tab, label: m.label, at: i }; })
+      .filter(function (m) { return m.at >= 0; })
+      .sort(function (a, b) { return a.at - b.at; })
+      .slice(0, 2)
+      .map(function (m) { return { tab: m.tab, label: m.label }; });
+  }
+
   // history: [{role:'user'|'model', text}]
   function buildChatRequest(history, question, facts) {
     const contents = [];
@@ -160,7 +195,7 @@
     contents.push({ role: 'user', parts: [{ text: q }] });
     return {
       systemInstruction: {
-        parts: [{ text: SYSTEM_RULES + '\n7. 답은 5문장 이내로 짧게 합니다. 목록이 필요하면 3개 이내로 씁니다. 마크다운 기호(*, #)는 쓰지 않습니다.' }]
+        parts: [{ text: SYSTEM_RULES + '\n' + CHAT_RULES }]
       },
       contents: contents,
       generationConfig: { temperature: 0.4 }
@@ -271,7 +306,7 @@
   function parseChat(text) {
     const plain = String(text).replace(/\*\*/g, '').replace(/^#+\s*/gm, '').replace(/^\s*[*-]\s+/gm, '· ');
     const r = screen(plain);
-    return { ok: true, text: r.text, removed: r.removed };
+    return { ok: true, text: r.text, removed: r.removed, links: menuLinks(r.text) };
   }
 
   // ---------- 호출 ----------
@@ -415,7 +450,9 @@
     MAX_IMAGE_BYTES: MAX_IMAGE_BYTES,
     BLOCKED: BLOCKED,
     SYSTEM_RULES: SYSTEM_RULES,
+    CHAT_RULES: CHAT_RULES,
     GUARDS: GUARDS,
+    menuLinks: menuLinks,
     screen: screen,
     maskIds: maskIds,
     buildExtractRequest: buildExtractRequest,
