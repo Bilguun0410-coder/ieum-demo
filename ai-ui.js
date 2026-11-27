@@ -296,7 +296,7 @@
       if (m.role === 'error') return '<div class="msg sys"><div class="bubble">' + h(m.text) + '</div></div>';
       return '<div class="msg ai"><span class="avatar" aria-hidden="true">AI</span><div class="bubble">' + h(m.text) +
         (m.removed ? '<div class="sub">안전장치가 ' + m.removed + '개 문장을 걸렀습니다.</div>' : '') +
-        (m.links && m.links.length ? '<div class="btn-row chat-links">' + m.links.map(function (l) {
+        (m.links && m.links.length ? '<div class="btn-row chat-links">' + (m.defaultLinks ? '<span class="sub">다음에 할 수 있는 일</span>' : '') + m.links.map(function (l) {
           return '<button type="button" class="secondary small" data-action="tab" data-tab="' + h(l.tab) + '">' + h(l.label) + ' 바로 가기</button>';
         }).join('') + '</div>' : '') +
         (canSpeak ? '<button type="button" class="link small" data-action="speak" data-i="' + i + '">🔊 읽어주기</button>' : '') + '</div></div>';
@@ -321,7 +321,7 @@
       setStatus('chatStatus', '');
     } else {
       STORE.useAi('도우미 질문');
-      chat.push({ role: 'model', text: r.text, removed: r.removed.length, links: r.links || [] });
+      chat.push({ role: 'model', text: r.text, removed: r.removed.length, links: r.links || [], defaultLinks: !!r.defaultLinks });
       setStatus('chatStatus', '');
     }
     renderChat();

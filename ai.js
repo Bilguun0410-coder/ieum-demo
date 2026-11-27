@@ -315,10 +315,36 @@
     return { ok: true, summary: summary, missing: missing, questions: questions, removed: removed };
   }
 
+  // AI가 메뉴 이름을 하나도 안 쓰면 화면이 대신 붙이는 기본 바로가기 (지시를 어겨도 다음 행동이 남도록)
+  const DEFAULT_LINKS = [
+    { tab: 'family', label: '① 가족' },
+    { tab: 'check', label: '③ 준비 점검' },
+    { tab: 'report', label: '⑥ 상담 리포트' }
+  ];
+  const EXPERT_RE = /세무사|변호사|전문가/;
+  const EXPERT_ONLY_RE = /^[^.?!]*(세무사|변호사|전문가)[^.?!]*(확인|상담|문의)\s*(하세요|하십시오|해\s*주세요|하시기\s*바랍니다|받으세요)[.!]?$/;
+
+  // 같은 답 안에서 이미 세무사·변호사를 언급했다면, 따로 떨어진 "전문가에게 확인하세요" 문장은 뺀다.
+  function dedupeExpert(text) {
+    const lines = String(text).split('\n').map(function (line) { return splitSentences(line); });
+    const all = [].concat.apply([], lines);
+    const firstMention = all.findIndex(function (x) { return EXPERT_RE.test(x); });
+    if (firstMention < 0) return text;
+    let i = -1;
+    return lines.map(function (sents) {
+      return sents.filter(function (x) {
+        i++;
+        return !(i > firstMention && EXPERT_ONLY_RE.test(x));
+      }).join(' ');
+    }).filter(Boolean).join('\n');
+  }
+
   function parseChat(text) {
     const plain = String(text).replace(/\*\*/g, '').replace(/^#+\s*/gm, '').replace(/^\s*[*-]\s+/gm, '· ');
     const r = screen(plain);
-    return { ok: true, text: r.text, removed: r.removed, links: menuLinks(r.text) };
+    const clean = dedupeExpert(r.text);
+    const found = menuLinks(clean);
+    return { ok: true, text: clean, removed: r.removed, links: found.length ? found : DEFAULT_LINKS.slice(), defaultLinks: !found.length };
   }
 
   // ---------- 호출 ----------
@@ -465,6 +491,8 @@
     CHAT_RULES: CHAT_RULES,
     GUARDS: GUARDS,
     menuLinks: menuLinks,
+    DEFAULT_LINKS: DEFAULT_LINKS,
+    dedupeExpert: dedupeExpert,
     screen: screen,
     maskIds: maskIds,
     buildExtractRequest: buildExtractRequest,

@@ -226,3 +226,17 @@ test('안전장치: 줄바꿈(번호 목록)을 지우지 않고, 금지 문장�
   assert.equal(c.text.split('\n').length, 4);
   assert.deepEqual(c.links.map((l) => l.tab), ['family']);
 });
+
+test('도우미 답변: 메뉴 이름이 없으면 기본 바로가기를 붙이고, 중복된 전문가 안내 문장은 뺌', () => {
+  const second = '답답하셨을 텐데, 이 앱은 방법을 대신 정하는 곳이 아니라 준비를 돕는 도구입니다. 자료는 상담 때 내밀 리포트로 만들어 드립니다. 최종적인 방법 결정은 세무사·변호사 등 전문가에게 확인하세요.';
+  const r = A.parseChat(second);
+  assert.equal(r.defaultLinks, true);
+  assert.deepEqual(r.links.map((l) => l.tab), ['family', 'check', 'report']);
+  assert.match(r.text, /전문가에게 확인하세요/); // 유일한 언급이면 남긴다
+  const first = '어떤 방법을 고를지는 세무사·변호사와 정하실 일이라, 이 앱에서는 정해 드리지 않습니다.\n1. 배우자분이 계신가요?\n구체적인 세금 액수나 법적 효력은 세무사·변호사에게 확인하세요.\n먼저 ① 가족에서 적어 보시겠어요?';
+  const f = A.parseChat(first);
+  assert.doesNotMatch(f.text, /에게 확인하세요/);
+  assert.match(f.text, /^어떤 방법을 고를지는 세무사/);
+  assert.equal(f.text.split('\n').length, 3);
+  assert.equal(f.defaultLinks, false);
+});
