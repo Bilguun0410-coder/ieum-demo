@@ -199,6 +199,9 @@ test('도우미 지시: 거절 후 앱 기능·확인 질문·메뉴 안내로 �
   assert.match(sys, /질문을 2~3개/);
   assert.match(sys, /④ 시나리오 비교/);
   assert.match(sys, /되풀이하지 말고/);
+  assert.match(sys, /마지막 문장은 지금 바로 할 일 하나/);
+  assert.match(sys, /아직 답하지 않았다면/);
+  assert.match(sys, /① 가족과 ② 재산·증여에 적어/);
 });
 
 test('도우미 답변: 메뉴 이름을 바로가기로 바꾸고, 좋은 안내 문장은 안전장치에 걸리지 않음', () => {
@@ -212,5 +215,14 @@ test('도우미 답변: 메뉴 이름을 바로가기로 바꾸고, 좋은 안�
   assert.equal(r.removed.length, 0);
   assert.deepEqual(r.links.map((l) => l.tab), ['scenario', 'report']);
   assert.deepEqual(A.menuLinks('유류분은 상속인의 최소 몫입니다.'), []);
-  assert.deepEqual(A.menuLinks('준비 점검, 시나리오 비교, 상담 리포트').length, 2);
+  assert.deepEqual(A.menuLinks('준비 점검, 시나리오 비교, 상담 리포트, ① 가족').length, 3);
+});
+
+test('안전장치: 줄바꿈(번호 목록)을 지우지 않고, 금지 문장만 한 줄 안에서 가림', () => {
+  const r = A.screen('먼저 여쭙겠습니다.\n1. 배우자분이 계신가요?\n2. 자녀분은 몇 명인가요?\n증여하는 게 더 유리합니다. 확인해 보세요.');
+  assert.equal(r.text, '먼저 여쭙겠습니다.\n1. 배우자분이 계신가요?\n2. 자녀분은 몇 명인가요?\n' + A.BLOCKED + ' 확인해 보세요.');
+  assert.equal(r.removed.length, 1);
+  const c = A.parseChat('질문입니다.\n\n1. 가족\n2. 재산\n① 가족에서 적어 보시겠어요?');
+  assert.equal(c.text.split('\n').length, 4);
+  assert.deepEqual(c.links.map((l) => l.tab), ['family']);
 });
